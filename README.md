@@ -11,6 +11,7 @@ The app includes:
 - saved outfits with SQLite
 
 ---
+<img width="600" height="400" alt="image" src="https://github.com/user-attachments/assets/126d2922-b4b5-4e3b-89c8-1becb403c89f" />
 
 ## Features
 
