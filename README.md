@@ -4,7 +4,8 @@ StyleMatch AI is a Python + Streamlit web app that helps users explore clothing 
 
 ## Link to the Live Demo app:
 https://stylematch-ai-h9lu.onrender.com
-The app includes:
+
+## The app includes:
 - skin tone and undertone estimation from an uploaded image
 - manual outfit building
 - automatic generation of 5 outfit ideas
