@@ -2,6 +2,8 @@
 
 StyleMatch AI is a Streamlit application for tone-aware outfit exploration. It combines image-based complexion estimation, a structured local style knowledge base, rule-driven outfit recommendations, and an avatar preview workflow in one polished interface.
 
+<img width="350" height="150" alt="logo" src="https://github.com/user-attachments/assets/53defc2c-f900-45da-80f9-531bf7ebd2a6" />
+<img width="1762" height="509" alt="image" src="https://github.com/user-attachments/assets/279cde1c-a6d2-40bc-bbf6-861f864c63c4" />
 
 ## What the app does
 
@@ -131,10 +133,3 @@ This makes the behavior transparent, editable, and safe to extend without retrai
 - face detection uses a lightweight classical OpenCV detector rather than a dedicated face parsing model
 - avatar realism depends on the quality of the supplied clothing overlay assets
 - recommendation logic is rule-based, so it is explainable but not trend-aware or personalized over time
-
-## Practical next steps
-
-- add more regression tests with synthetic and real sample portraits
-- move Streamlit page sections into dedicated view modules for a larger codebase
-- add an optional face-landmark or segmentation model for more precise skin sampling
-- expand saved looks into a richer wardrobe history with tags and favorites
