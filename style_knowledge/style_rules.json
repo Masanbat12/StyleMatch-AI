@@ -1,0 +1,34 @@
+{
+  "casual": {
+    "preferred_colors": ["white", "blue", "olive", "gray", "beige"],
+    "preferred_shoes": ["white", "beige", "gray"],
+    "fit_notes": [
+      "Casual looks should feel relaxed, wearable, and low-effort.",
+      "Neutral shoes often improve versatility."
+    ]
+  },
+  "elegant": {
+    "preferred_colors": ["black", "burgundy", "navy", "camel", "charcoal"],
+    "preferred_shoes": ["black", "brown", "beige"],
+    "fit_notes": [
+      "Elegant looks benefit from cleaner contrast and richer tones.",
+      "Avoid overly playful color combinations."
+    ]
+  },
+  "street": {
+    "preferred_colors": ["red", "cobalt", "black", "forest green", "charcoal"],
+    "preferred_shoes": ["white", "black"],
+    "fit_notes": [
+      "Streetwear can support stronger contrast and bolder color accents.",
+      "One statement color works better than many competing accents."
+    ]
+  },
+  "minimal": {
+    "preferred_colors": ["white", "black", "gray", "taupe", "beige"],
+    "preferred_shoes": ["white", "black", "beige"],
+    "fit_notes": [
+      "Minimal looks should feel restrained and consistent.",
+      "Simple palettes usually work better than loud combinations."
+    ]
+  }
+}

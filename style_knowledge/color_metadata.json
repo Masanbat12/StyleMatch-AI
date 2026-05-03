@@ -1,0 +1,134 @@
+{
+  "white": {
+    "hex": "#FFFFFF",
+    "family": "neutral",
+    "brightness": 100,
+    "temperature": "neutral"
+  },
+  "black": {
+    "hex": "#1A1A1A",
+    "family": "neutral",
+    "brightness": 5,
+    "temperature": "neutral"
+  },
+  "gray": {
+    "hex": "#808080",
+    "family": "neutral",
+    "brightness": 50,
+    "temperature": "neutral"
+  },
+  "charcoal": {
+    "hex": "#36454F",
+    "family": "neutral",
+    "brightness": 22,
+    "temperature": "cool"
+  },
+  "beige": {
+    "hex": "#F5F5DC",
+    "family": "neutral",
+    "brightness": 85,
+    "temperature": "warm"
+  },
+  "cream": {
+    "hex": "#FFFDD0",
+    "family": "neutral",
+    "brightness": 92,
+    "temperature": "warm"
+  },
+  "taupe": {
+    "hex": "#8B8589",
+    "family": "neutral",
+    "brightness": 60,
+    "temperature": "neutral"
+  },
+  "camel": {
+    "hex": "#C19A6B",
+    "family": "brown",
+    "brightness": 68,
+    "temperature": "warm"
+  },
+  "brown": {
+    "hex": "#8B4513",
+    "family": "brown",
+    "brightness": 35,
+    "temperature": "warm"
+  },
+  "blue": {
+    "hex": "#3498DB",
+    "family": "blue",
+    "brightness": 60,
+    "temperature": "cool"
+  },
+  "navy": {
+    "hex": "#000080",
+    "family": "blue",
+    "brightness": 18,
+    "temperature": "cool"
+  },
+  "cobalt": {
+    "hex": "#0047AB",
+    "family": "blue",
+    "brightness": 28,
+    "temperature": "cool"
+  },
+  "icy blue": {
+    "hex": "#AFDBF5",
+    "family": "blue",
+    "brightness": 88,
+    "temperature": "cool"
+  },
+  "green": {
+    "hex": "#27AE60",
+    "family": "green",
+    "brightness": 48,
+    "temperature": "neutral"
+  },
+  "olive": {
+    "hex": "#556B2F",
+    "family": "green",
+    "brightness": 36,
+    "temperature": "warm"
+  },
+  "forest green": {
+    "hex": "#228B22",
+    "family": "green",
+    "brightness": 34,
+    "temperature": "neutral"
+  },
+  "deep green": {
+    "hex": "#056608",
+    "family": "green",
+    "brightness": 22,
+    "temperature": "cool"
+  },
+  "burgundy": {
+    "hex": "#800020",
+    "family": "red",
+    "brightness": 18,
+    "temperature": "cool"
+  },
+  "rust": {
+    "hex": "#B7410E",
+    "family": "orange",
+    "brightness": 34,
+    "temperature": "warm"
+  },
+  "mustard": {
+    "hex": "#E1AD01",
+    "family": "yellow",
+    "brightness": 60,
+    "temperature": "warm"
+  },
+  "soft pink": {
+    "hex": "#FFB6C1",
+    "family": "pink",
+    "brightness": 84,
+    "temperature": "cool"
+  },
+  "red": {
+    "hex": "#E74C3C",
+    "family": "red",
+    "brightness": 45,
+    "temperature": "warm"
+  }
+}
