@@ -17,7 +17,22 @@ class SupabaseConfigurationError(RuntimeError):
     pass
 
 
+def _clean_secret_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+
+    if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in {'"', "'"}:
+        cleaned = cleaned[1:-1].strip()
+
+    return cleaned or None
+
+
 def _normalize_supabase_url(url: str | None) -> str | None:
+    url = _clean_secret_text(url)
     if not url:
         return None
 
@@ -44,12 +59,12 @@ def _normalize_supabase_url(url: str | None) -> str | None:
 def _secret_value(name: str) -> str | None:
     env_value = os.getenv(name)
     if env_value:
-        return env_value
+        return _clean_secret_text(env_value)
 
     try:
         if name in st.secrets:
             value = st.secrets[name]
-            return str(value) if value else None
+            return _clean_secret_text(str(value) if value else None)
     except Exception:
         pass
 
@@ -62,7 +77,7 @@ def _secret_section_value(section: str, key: str) -> str | None:
         if not section_data:
             return None
         value = section_data.get(key)
-        return str(value) if value else None
+        return _clean_secret_text(str(value) if value else None)
     except Exception:
         return None
 
@@ -76,8 +91,12 @@ def get_supabase_key() -> str | None:
     return (
         _secret_value("SUPABASE_SERVICE_ROLE_KEY")
         or _secret_section_value("supabase", "service_role_key")
+        or _secret_value("SUPABASE_SECRET_KEY")
+        or _secret_section_value("supabase", "secret_key")
         or _secret_value("SUPABASE_KEY")
         or _secret_section_value("supabase", "key")
+        or _secret_value("SUPABASE_PUBLISHABLE_KEY")
+        or _secret_section_value("supabase", "publishable_key")
         or _secret_value("SUPABASE_ANON_KEY")
         or _secret_section_value("supabase", "anon_key")
     )
@@ -87,10 +106,14 @@ def get_supabase_auth_key() -> str | None:
     return (
         _secret_value("SUPABASE_KEY")
         or _secret_section_value("supabase", "key")
+        or _secret_value("SUPABASE_PUBLISHABLE_KEY")
+        or _secret_section_value("supabase", "publishable_key")
         or _secret_value("SUPABASE_ANON_KEY")
         or _secret_section_value("supabase", "anon_key")
         or _secret_value("SUPABASE_SERVICE_ROLE_KEY")
         or _secret_section_value("supabase", "service_role_key")
+        or _secret_value("SUPABASE_SECRET_KEY")
+        or _secret_section_value("supabase", "secret_key")
     )
 
 
