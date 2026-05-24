@@ -38,7 +38,41 @@ def _preferred_profile(undertone: str, style: str, occasion: str) -> dict[str, A
     }
 
 
-def get_recommended_colors(undertone: str, style: str, occasion: str) -> list[str]:
+def _slot_preference_weight(user_context: dict[str, Any] | None, slot: str, color: str) -> float:
+    if not user_context:
+        return 0.0
+    slot_preferences = user_context.get("slot_color_preferences", {})
+    return float(slot_preferences.get(slot, {}).get(color, 0.0))
+
+
+def _personalization_bonus(
+    user_context: dict[str, Any] | None,
+    slot: str,
+    color: str,
+) -> tuple[int, str | None]:
+    if not user_context:
+        return 0, None
+
+    preferred = float(user_context.get("preferred_color_weights", {}).get(color, 0.0))
+    disliked = float(user_context.get("disliked_color_weights", {}).get(color, 0.0))
+    slot_weight = _slot_preference_weight(user_context, slot, color)
+    net = preferred + (slot_weight * 1.15) - (disliked * 1.1)
+
+    if net >= 4.0:
+        return 8, f"{_humanize(color)} aligns strongly with your saved preferences."
+    if net >= 2.0:
+        return 4, f"{_humanize(color)} reflects a color you often keep or save."
+    if net <= -2.8:
+        return -7, f"{_humanize(color)} conflicts with colors you often move away from."
+    return 0, None
+
+
+def get_recommended_colors(
+    undertone: str,
+    style: str,
+    occasion: str,
+    user_context: dict[str, Any] | None = None,
+) -> list[str]:
     profile = _preferred_profile(undertone, style, occasion)
     weighted_colors: dict[str, int] = {}
 
@@ -55,6 +89,11 @@ def get_recommended_colors(undertone: str, style: str, occasion: str) -> list[st
     for left, right in COLOR_THEORY_RULES.get("universal_pairs", []):
         weighted_colors[left] = weighted_colors.get(left, 0) + 1
         weighted_colors[right] = weighted_colors.get(right, 0) + 1
+    if user_context:
+        for color, weight in user_context.get("preferred_color_weights", {}).items():
+            weighted_colors[color] = weighted_colors.get(color, 0) + round(float(weight) * 1.3)
+        for color, weight in user_context.get("disliked_color_weights", {}).items():
+            weighted_colors[color] = weighted_colors.get(color, 0) - round(float(weight) * 1.2)
 
     ranked_colors = sorted(
         weighted_colors.items(),
@@ -214,9 +253,10 @@ def score_breakdown(
     shirt_color: str,
     pants_color: str,
     shoes_color: str,
+    user_context: dict[str, Any] | None = None,
 ) -> tuple[int, list[str]]:
     profile = _preferred_profile(undertone, style, occasion)
-    recommended = set(get_recommended_colors(undertone, style, occasion))
+    recommended = set(get_recommended_colors(undertone, style, occasion, user_context=user_context))
     avoided = set(get_avoid_colors(undertone))
     score = 45
     reasons: list[str] = []
@@ -226,6 +266,10 @@ def score_breakdown(
         score += color_score
         if color_reason:
             reasons.append(f"{label}: {color_reason}")
+        preference_score, preference_reason = _personalization_bonus(user_context, label.lower(), color)
+        score += preference_score
+        if preference_reason:
+            reasons.append(f"{label}: {preference_reason}")
 
     harmony_score, _, harmony_reason = _evaluate_harmony(shirt_color, pants_color)
     score += harmony_score
@@ -260,6 +304,7 @@ def calculate_outfit_score(
     shirt_color: str,
     pants_color: str,
     shoes_color: str,
+    user_context: dict[str, Any] | None = None,
 ) -> int:
     score, _ = score_breakdown(
         skin_tone=skin_tone,
@@ -269,6 +314,7 @@ def calculate_outfit_score(
         shirt_color=shirt_color,
         pants_color=pants_color,
         shoes_color=shoes_color,
+        user_context=user_context,
     )
     return score
 
@@ -279,9 +325,10 @@ def generate_outfit_suggestions(
     style: str,
     occasion: str,
     limit: int = 5,
+    user_context: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     profile = _preferred_profile(undertone, style, occasion)
-    recommended = get_recommended_colors(undertone, style, occasion)
+    recommended = get_recommended_colors(undertone, style, occasion, user_context=user_context)
     top_candidates = recommended[:10] if len(recommended) >= 10 else recommended
     pant_candidates = [
         color
@@ -320,6 +367,7 @@ def generate_outfit_suggestions(
             shirt_color=shirt_color,
             pants_color=pants_color,
             shoes_color=shoes_color,
+            user_context=user_context,
         )
         _, harmony_label, _ = _evaluate_harmony(shirt_color, pants_color)
         explanation = build_outfit_explanation(
@@ -342,6 +390,7 @@ def generate_outfit_suggestions(
                 "explanation": explanation,
                 "reasons": reasons,
                 "harmony": harmony_label or "balanced",
+                "personalized": user_context is not None,
             }
         )
 

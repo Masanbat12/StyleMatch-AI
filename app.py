@@ -6,11 +6,22 @@ import streamlit as st
 
 from avatar_renderer import render_avatar
 from catalog import ALL_COLORS, COLOR_MAP, OCCASION_OPTIONS, STYLE_OPTIONS, UNDERTONE_OPTIONS
-from database import get_saved_outfits, init_db, save_outfit
+from database import active_storage_backend, get_saved_outfits, init_db, save_outfit
 from image_analysis import ImageAnalysisError, analyze_skin_from_upload
 from knowledge_base import SOURCES
 from recommendation_engine import generate_outfit_suggestions, get_avoid_colors, get_recommended_colors, score_breakdown
+from session_manager import (
+    current_user_id,
+    current_username,
+    initialize_session_state,
+    is_authenticated,
+    is_guest_mode,
+    login_user,
+    logout_user,
+    start_guest_mode,
+)
 from style_assistant import build_grounded_answer
+from supabase_auth_service import AuthenticationError, SupabaseAuthService, auth_is_available
 from ui_components import (
     OCCASION_META,
     STYLE_META,
@@ -29,6 +40,7 @@ from ui_components import (
     render_sidebar_brand,
     render_sidebar_group_intro,
     render_skin_tone_picker,
+    render_welcome_card,
 )
 
 DEFAULT_PROFILE = {
@@ -50,19 +62,54 @@ def normalize_skin_tone(value: str) -> str:
         return "dark"
     return value
 
-init_db()
+
+def initialize_app_state() -> None:
+    initialize_session_state()
+    for key, default_value in DEFAULT_PROFILE.items():
+        st.session_state.setdefault(key, default_value)
+
+    st.session_state.setdefault("refinement_source", None)
+
+
+def save_current_outfit(
+    skin_tone: str,
+    undertone: str,
+    style: str,
+    occasion: str,
+    shirt_color: str,
+    pants_color: str,
+    shoes_color: str,
+    score: int,
+    explanation: str | None = None,
+) -> None:
+    save_outfit(
+        skin_tone=skin_tone,
+        undertone=undertone,
+        style=style,
+        occasion=occasion,
+        shirt_color=shirt_color,
+        pants_color=pants_color,
+        shoes_color=shoes_color,
+        score=score,
+        user_id=current_user_id() if is_authenticated() else "local-user",
+        username=current_username() if is_authenticated() else None,
+        explanation=explanation,
+        source="streamlit_local",
+    )
+
 
 st.set_page_config(
     page_title="StyleMatch AI",
-    page_icon=str(LOGO_PATH) if LOGO_PATH.exists() else "👕",
+    page_icon=str(LOGO_PATH) if LOGO_PATH.exists() else "S",
     layout="wide",
 )
 inject_theme(LOGO_PATH if LOGO_PATH.exists() else None)
 
-for key, default_value in DEFAULT_PROFILE.items():
-    st.session_state.setdefault(key, default_value)
-
-st.session_state.skin_tone = normalize_skin_tone(st.session_state.skin_tone)
+initialize_app_state()
+init_db()
+storage_backend = active_storage_backend()
+auth_enabled, auth_message = auth_is_available()
+auth_service = SupabaseAuthService() if auth_enabled else None
 
 with st.sidebar:
     render_sidebar_brand(
@@ -70,23 +117,98 @@ with st.sidebar:
         "StyleMatch AI",
         "Profile atelier controls",
     )
-    st.caption("Set complexion, mood, and occasion with a cleaner styling workflow.")
+    st.caption("Set complexion, style, and occasion for a clean styling workflow.")
+
+    render_sidebar_group_intro(
+        "Access",
+        "Sign in to keep saved looks per account, or continue locally as a guest.",
+    )
+    if auth_enabled:
+        if is_authenticated():
+            st.success(f"Signed in as {current_username()}")
+            if st.button("Log out", use_container_width=True):
+                logout_user()
+                st.rerun()
+        else:
+            access_mode = st.radio(
+                "Session mode",
+                options=["Guest", "Log in", "Sign up"],
+                horizontal=True,
+                label_visibility="collapsed",
+            )
+            if access_mode == "Guest":
+                st.caption("Guest mode keeps styling local to this session.")
+                if st.button("Continue as Guest", use_container_width=True):
+                    start_guest_mode(reset_state=True)
+                    st.rerun()
+            elif access_mode == "Log in":
+                with st.form("login_form", clear_on_submit=False):
+                    login_email = st.text_input("Email", key="login_email")
+                    login_password = st.text_input("Password", type="password", key="login_password")
+                    login_submit = st.form_submit_button("Log in", use_container_width=True)
+                if login_submit:
+                    try:
+                        user = auth_service.authenticate_user(login_email, login_password) if auth_service else None
+                    except AuthenticationError as exc:
+                        st.error(str(exc))
+                    else:
+                        if user:
+                            login_user(user)
+                            st.rerun()
+            else:
+                with st.form("signup_form", clear_on_submit=False):
+                    signup_display_name = st.text_input("Nickname", key="signup_display_name")
+                    signup_email = st.text_input("Email", key="signup_email")
+                    signup_password = st.text_input("Password", type="password", key="signup_password")
+                    signup_confirm = st.text_input("Confirm password", type="password", key="signup_confirm")
+                    signup_submit = st.form_submit_button("Create account", use_container_width=True)
+                if signup_submit:
+                    if signup_password != signup_confirm:
+                        st.error("Passwords do not match.")
+                    else:
+                        try:
+                            user = (
+                                auth_service.register_user(signup_email, signup_password, signup_display_name)
+                                if auth_service
+                                else None
+                            )
+                        except AuthenticationError as exc:
+                            st.error(str(exc))
+                        else:
+                            if user:
+                                login_user(user)
+                                st.rerun()
+    else:
+        start_guest_mode(reset_state=False)
+        st.caption("Supabase auth is not configured yet.")
+        if auth_message:
+            st.caption(auth_message)
 
     render_sidebar_group_intro(
         "Complexion",
         "Choose a tone and undertone to anchor the styling direction.",
     )
     st.session_state.skin_tone = render_skin_tone_picker(UI_SKIN_TONE_OPTIONS, "skin_tone")
-    st.session_state.undertone = render_icon_choice_group(UNDERTONE_OPTIONS, "undertone", UNDERTONE_META, columns_per_row=1)
+    st.session_state.undertone = render_icon_choice_group(
+        UNDERTONE_OPTIONS,
+        "undertone",
+        UNDERTONE_META,
+        columns_per_row=1,
+    )
 
     render_sidebar_group_intro(
         "Wardrobe Direction",
         "Choose the aesthetic and setting to refine the recommendations.",
     )
     st.session_state.style = render_icon_choice_group(STYLE_OPTIONS, "style", STYLE_META, columns_per_row=2)
-    st.session_state.occasion = render_icon_choice_group(OCCASION_OPTIONS, "occasion", OCCASION_META, columns_per_row=2)
+    st.session_state.occasion = render_icon_choice_group(
+        OCCASION_OPTIONS,
+        "occasion",
+        OCCASION_META,
+        columns_per_row=2,
+    )
 
-skin_tone = st.session_state.skin_tone
+skin_tone = normalize_skin_tone(st.session_state.skin_tone)
 undertone = st.session_state.undertone
 style = st.session_state.style
 occasion = st.session_state.occasion
@@ -99,6 +221,8 @@ render_branded_header(
     "StyleMatch AI",
     "Refined outfit guidance for tone, style, and occasion.",
 )
+if auth_enabled and is_authenticated():
+    render_welcome_card(current_username())
 render_profile_band(
     {
         "Skin Tone": skin_tone,
@@ -107,6 +231,15 @@ render_profile_band(
         "Occasion": occasion,
     }
 )
+if auth_enabled and is_authenticated():
+    render_note_chip(f"Hello, {current_username()}.")
+if storage_backend == "supabase":
+    if is_authenticated():
+        render_note_chip("Supabase sync is active for your saved looks.")
+    else:
+        render_note_chip("Supabase sync is configured. Sign in to keep looks under your own account.")
+else:
+    render_note_chip("Local mode is active. Saved looks stay on this device.")
 
 tab_analyzer, tab_builder, tab_generator, tab_assistant, tab_saved, tab_sources = st.tabs(
     ["Image Analyzer", "Outfit Builder", "Generate 5 Looks", "AI Style Assistant", "Saved Looks", "Sources"]
@@ -167,8 +300,8 @@ with tab_analyzer:
                             st.write(f"- {warning}")
 
                     if st.button("Use detected profile", key="use_detected_profile"):
-                        st.session_state.skin_tone = normalize_skin_tone(result["skin_tone"])
-                        st.session_state.undertone = result["undertone"]
+                        st.session_state.skin_tone = normalize_skin_tone(str(result["skin_tone"]))
+                        st.session_state.undertone = str(result["undertone"])
                         st.rerun()
 
             with image_col:
@@ -196,6 +329,8 @@ with tab_builder:
                 "Design your outfit combination",
                 "Start with recommended tones, then push the palette toward a more editorial direction if you want to experiment.",
             )
+            if st.session_state.refinement_source:
+                render_note_chip("Refining a generated look. Saving will add it to your local archive.")
             shirt_options = recommended_colors + [color for color in ALL_COLORS if color not in recommended_colors]
             shirt_color = render_color_select("Shirt Color", shirt_options, shirt_options[0], "builder_shirt_color", COLOR_MAP)
             pants_color = render_color_select("Pants Color", ALL_COLORS, "black", "builder_pants_color", COLOR_MAP)
@@ -220,7 +355,7 @@ with tab_builder:
                 st.write(f"- {reason}")
 
             if st.button("Save this outfit", use_container_width=True):
-                save_outfit(
+                save_current_outfit(
                     skin_tone=skin_tone,
                     undertone=undertone,
                     style=style,
@@ -230,7 +365,11 @@ with tab_builder:
                     shoes_color=shoes_color,
                     score=score,
                 )
-                st.success("Outfit saved successfully.")
+                st.session_state.refinement_source = None
+                if storage_backend == "supabase" and is_authenticated():
+                    st.success("Outfit saved to Supabase.")
+                else:
+                    st.success("Outfit saved locally.")
 
     with right_col:
         with st.container(border=True):
@@ -246,7 +385,10 @@ with tab_builder:
                 shoes_color=shoes_color,
             )
             st.image(avatar, width="content")
-            st.markdown('<div class="avatar-caption">Rendered from layered fashion assets tinted to your current outfit selection.</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="avatar-caption">Rendered from layered fashion assets tinted to your current outfit selection.</div>',
+                unsafe_allow_html=True,
+            )
 
 with tab_generator:
     render_section_intro(
@@ -299,18 +441,32 @@ with tab_generator:
                     st.caption(outfit["explanation"])
                     for reason in outfit.get("reasons", [])[:2]:
                         st.write(f"- {reason}")
-                    if st.button(f"Save Look {idx}", key=f"save_generated_{idx}"):
-                        save_outfit(
-                            skin_tone=skin_tone,
-                            undertone=undertone,
-                            style=style,
-                            occasion=occasion,
-                            shirt_color=outfit["shirt_color"],
-                            pants_color=outfit["pants_color"],
-                            shoes_color=outfit["shoes_color"],
-                            score=outfit["score"],
-                        )
-                        st.success(f"Look {idx} saved.")
+
+                    refine_col, save_col = st.columns(2, gap="small")
+                    with refine_col:
+                        if st.button("Refine in Builder", key=f"refine_generated_{idx}", use_container_width=True):
+                            st.session_state.builder_shirt_color = outfit["shirt_color"]
+                            st.session_state.builder_pants_color = outfit["pants_color"]
+                            st.session_state.builder_shoes_color = outfit["shoes_color"]
+                            st.session_state.refinement_source = outfit
+                            st.rerun()
+                    with save_col:
+                        if st.button(f"Save Look {idx}", key=f"save_generated_{idx}", use_container_width=True):
+                            save_current_outfit(
+                                skin_tone=skin_tone,
+                                undertone=undertone,
+                                style=style,
+                                occasion=occasion,
+                                shirt_color=outfit["shirt_color"],
+                                pants_color=outfit["pants_color"],
+                                shoes_color=outfit["shoes_color"],
+                                score=outfit["score"],
+                                explanation=outfit["explanation"],
+                            )
+                            if storage_backend == "supabase" and is_authenticated():
+                                st.success(f"Look {idx} saved to Supabase.")
+                            else:
+                                st.success(f"Look {idx} saved locally.")
 
 with tab_assistant:
     render_section_intro(
@@ -346,7 +502,7 @@ with tab_saved:
         "Review your archived outfit decisions",
         "A running wardrobe history of combinations you chose to keep, complete with profile context and avatar previews.",
     )
-    saved_outfits = get_saved_outfits()
+    saved_outfits = get_saved_outfits(current_user_id() if is_authenticated() else "local-user")
 
     if not saved_outfits:
         st.info("No saved outfits yet.")
@@ -359,8 +515,10 @@ with tab_saved:
                     render_panel_heading(
                         "Saved Profile",
                         f"Look #{outfit['id']}",
-                        "Stored locally so you can revisit combinations that felt right.",
+                        "Stored for later review so you can revisit combinations that felt right.",
                     )
+                    if outfit.get("username"):
+                        st.write(f"**Account:** {outfit['username']}")
                     st.write(f"**Skin tone:** {humanize_value(outfit['skin_tone'])}")
                     st.write(f"**Undertone:** {humanize_value(outfit['undertone'])}")
                     st.write(f"**Style:** {humanize_value(outfit['style'])}")

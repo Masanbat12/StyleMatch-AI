@@ -17,6 +17,7 @@ def build_grounded_answer(
     style: str,
     occasion: str,
     user_prompt: str,
+    user_context: dict | None = None,
 ) -> str:
     profile = UserProfile(
         skin_tone=skin_tone,
@@ -34,6 +35,7 @@ def build_grounded_answer(
         style=style,
         occasion=occasion,
         limit=3,
+        user_context=user_context,
     )
 
     lines: List[str] = []
@@ -53,6 +55,12 @@ def build_grounded_answer(
         lines.append(f"- Style note: {note}")
     for note in occasion_data.get("notes", [])[:2]:
         lines.append(f"- Occasion note: {note}")
+    if user_context:
+        insights = user_context.get("insights", {})
+        if insights.get("top_colors"):
+            lines.append(f"- Learned preference: you often keep {', '.join(insights['top_colors'][:3])} tones.")
+        if insights.get("top_styles"):
+            lines.append(f"- Learned style signal: {', '.join(insights['top_styles'][:2])}.")
     lines.append("")
     lines.append("Best outfit directions right now:")
     for i, outfit in enumerate(suggestions, start=1):

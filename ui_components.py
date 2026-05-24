@@ -349,6 +349,61 @@ def inject_theme(logo_path: str | Path | None = None) -> None:
             white-space: nowrap;
         }}
 
+        .welcome-card {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.15rem;
+            margin: 0.2rem 0 1rem;
+            border-radius: 24px;
+            background: linear-gradient(135deg, rgba(255, 250, 243, 0.94), rgba(245, 235, 214, 0.88));
+            border: 1px solid rgba(200, 169, 106, 0.18);
+            box-shadow: 0 14px 30px rgba(38, 31, 26, 0.06);
+        }}
+
+        .welcome-copy {{
+            min-width: 0;
+        }}
+
+        .welcome-kicker {{
+            color: var(--sm-gold-deep);
+            font-size: 0.72rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 0.22rem;
+        }}
+
+        .welcome-title {{
+            color: var(--sm-ink);
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(1.2rem, 2.2vw, 1.55rem);
+            line-height: 1.15;
+            margin: 0;
+        }}
+
+        .welcome-subtitle {{
+            color: var(--sm-muted);
+            margin-top: 0.3rem;
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }}
+
+        .welcome-badge {{
+            flex: 0 0 auto;
+            border-radius: 999px;
+            padding: 0.48rem 0.85rem;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(200, 169, 106, 0.2);
+            color: var(--sm-gold-deep);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }}
+
         .section-kicker {{
             color: var(--sm-gold-deep);
             font-size: 0.78rem;
@@ -694,6 +749,22 @@ def render_profile_band(items: dict[str, str]) -> None:
             f'<div class="profile-pill"><div class="profile-pill-label">{escape(label)}</div><div class="profile-pill-value">{escape(humanize_value(value))}</div></div>'
         )
     st.markdown(f'<div class="profile-band">{"".join(pills)}</div>', unsafe_allow_html=True)
+
+
+def render_welcome_card(name: str) -> None:
+    st.markdown(
+        (
+            '<div class="welcome-card">'
+            '<div class="welcome-copy">'
+            '<div class="welcome-kicker">Account</div>'
+            f'<h2 class="welcome-title">Welcome back, {escape(name)}</h2>'
+            '<div class="welcome-subtitle">Your saved looks and synced styling history are ready.</div>'
+            '</div>'
+            '<div class="welcome-badge">Signed In</div>'
+            '</div>'
+        ),
+        unsafe_allow_html=True,
+    )
 
 
 def render_note_chip(text: str) -> None:
