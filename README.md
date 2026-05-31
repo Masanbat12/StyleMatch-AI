@@ -15,6 +15,7 @@ https://stylematch-ai-h9lu.onrender.com/
 - supports Supabase sign up and login
 - keeps nicknames unique through a Supabase `user_profiles` table
 - saves authenticated looks to Supabase when configured
+- learns from Like / Not for me feedback with lightweight per-user style points
 - falls back to local SQLite storage when Supabase storage is unavailable
 
 ## Architecture
@@ -29,7 +30,7 @@ StyleMatch-AI/
 |-- knowledge_base.py              # Loads local JSON rule files
 |-- style_knowledge/               # Color, undertone, style, occasion, explanation data
 |-- avatar_renderer.py             # Layered avatar rendering and garment placement
-|-- database.py                    # Supabase saved-look sync with SQLite fallback
+|-- database.py                    # Supabase saved-look and feedback sync with SQLite fallback
 |-- supabase_client.py             # Supabase URL/key loading and client creation
 |-- supabase_auth_service.py       # Supabase Auth sign up/login flow
 |-- supabase_profile_repository.py # Nickname/profile storage in user_profiles
@@ -60,6 +61,7 @@ Run the SQL in `supabase_schema.sql` in the Supabase SQL editor. The app expects
 
 - `public.user_profiles` for email and nickname uniqueness
 - `public.saved_outfits` for cloud-saved looks
+- `public.outfit_feedback` for per-user Like / Not for me learning points
 
 If email confirmation is enabled in Supabase Auth, new users must confirm email before logging in. For local testing, you can disable email confirmation in Supabase Auth settings.
 
@@ -111,10 +113,11 @@ pytest -q
 - Configure Supabase secrets in Render environment variables.
 - Use the base Supabase project URL and the anon/publishable key plus service-role key described above.
 - The app still runs without Supabase secrets, but account login and cloud-saved looks are disabled and saved looks remain local.
+- Feedback also falls back to local SQLite when Supabase is not configured or temporarily unavailable.
 
 ## Known Limitations
 
 - skin tone and undertone estimation are heuristic and lighting-sensitive
 - face detection uses a lightweight OpenCV detector rather than a dedicated face parsing model
 - avatar realism depends on the supplied clothing overlay assets
-- recommendation logic is rule-based, explainable, and not trend-aware
+- recommendation logic is rule-based and explainable; feedback points personalize color ranking, but the app is not trend-aware

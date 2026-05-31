@@ -57,3 +57,46 @@ def test_score_breakdown_penalizes_avoided_colors():
 
     assert score < 70
     assert any("less flattering" in reason for reason in reasons)
+
+
+def test_feedback_points_influence_generated_suggestions():
+    suggestions = generate_outfit_suggestions(
+        skin_tone="medium",
+        undertone="neutral",
+        style="minimal",
+        occasion="daily",
+        limit=5,
+        feedback_context={
+            "color_scores": {"navy": 8, "white": -8},
+            "slot_color_scores": {
+                "shirt": {"navy": 8, "white": -8},
+                "pants": {},
+                "shoes": {},
+            },
+        },
+    )
+
+    assert suggestions[0]["shirt_color"] == "navy"
+
+
+def test_score_breakdown_explains_feedback_penalty():
+    score, reasons = score_breakdown(
+        skin_tone="medium",
+        undertone="neutral",
+        style="minimal",
+        occasion="daily",
+        shirt_color="white",
+        pants_color="black",
+        shoes_color="white",
+        feedback_context={
+            "color_scores": {"white": -8},
+            "slot_color_scores": {
+                "shirt": {"white": -8},
+                "pants": {},
+                "shoes": {"white": -8},
+            },
+        },
+    )
+
+    assert score < 80
+    assert any("feedback history" in reason or "not for you" in reason for reason in reasons)

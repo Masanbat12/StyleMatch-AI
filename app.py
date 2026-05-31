@@ -6,7 +6,14 @@ import streamlit as st
 
 from avatar_renderer import render_avatar
 from catalog import ALL_COLORS, COLOR_MAP, OCCASION_OPTIONS, STYLE_OPTIONS, UNDERTONE_OPTIONS
-from database import active_storage_backend, get_saved_outfits, init_db, save_outfit
+from database import (
+    active_storage_backend,
+    get_saved_outfits,
+    get_style_feedback,
+    init_db,
+    record_outfit_feedback,
+    save_outfit,
+)
 from image_analysis import ImageAnalysisError, analyze_skin_from_upload
 from knowledge_base import SOURCES
 from recommendation_engine import generate_outfit_suggestions, get_avoid_colors, get_recommended_colors, score_breakdown
@@ -69,6 +76,11 @@ def initialize_app_state() -> None:
         st.session_state.setdefault(key, default_value)
 
     st.session_state.setdefault("refinement_source", None)
+    st.session_state.setdefault("feedback_flash", None)
+
+
+def active_storage_user_id() -> str:
+    return current_user_id() if is_authenticated() else "local-user"
 
 
 def save_current_outfit(
@@ -96,6 +108,52 @@ def save_current_outfit(
         explanation=explanation,
         source="streamlit_local",
     )
+
+
+def record_current_feedback(
+    *,
+    skin_tone: str,
+    undertone: str,
+    style: str,
+    occasion: str,
+    shirt_color: str,
+    pants_color: str,
+    shoes_color: str,
+    score: int,
+    feedback: str,
+    source: str,
+) -> None:
+    saved_backend = record_outfit_feedback(
+        user_id=active_storage_user_id(),
+        username=current_username() if is_authenticated() else None,
+        skin_tone=skin_tone,
+        undertone=undertone,
+        style=style,
+        occasion=occasion,
+        shirt_color=shirt_color,
+        pants_color=pants_color,
+        shoes_color=shoes_color,
+        outfit_score=score,
+        feedback=feedback,
+        source=source,
+    )
+    action_label = "liked" if feedback == "like" else "marked as not for you"
+    if saved_backend == "supabase":
+        st.session_state.feedback_flash = (
+            "success",
+            f"Feedback saved to Supabase. This look was {action_label}, and recommendations were updated.",
+        )
+    elif storage_backend == "supabase" and is_authenticated():
+        st.session_state.feedback_flash = (
+            "warning",
+            f"Supabase feedback was unavailable, so this look was {action_label} locally.",
+        )
+    else:
+        st.session_state.feedback_flash = (
+            "success",
+            f"Feedback saved locally. This look was {action_label}, and recommendations were updated.",
+        )
+    st.rerun()
 
 
 st.set_page_config(
@@ -212,8 +270,9 @@ skin_tone = normalize_skin_tone(st.session_state.skin_tone)
 undertone = st.session_state.undertone
 style = st.session_state.style
 occasion = st.session_state.occasion
+feedback_context = get_style_feedback(active_storage_user_id())
 
-recommended_colors = get_recommended_colors(undertone, style, occasion)
+recommended_colors = get_recommended_colors(undertone, style, occasion, feedback_context=feedback_context)
 avoid_colors = get_avoid_colors(undertone)
 
 render_branded_header(
@@ -240,6 +299,19 @@ if storage_backend == "supabase":
         render_note_chip("Supabase sync is configured. Sign in to keep looks under your own account.")
 else:
     render_note_chip("Local mode is active. Saved looks stay on this device.")
+if feedback_context["feedback_count"]:
+    render_note_chip(
+        f"Learning from {feedback_context['feedback_count']} style reactions: "
+        f"{feedback_context['like_count']} liked, {feedback_context['unlike_count']} not for you."
+    )
+
+if st.session_state.feedback_flash:
+    flash_level, flash_message = st.session_state.feedback_flash
+    if flash_level == "warning":
+        st.warning(flash_message)
+    else:
+        st.success(flash_message)
+    st.session_state.feedback_flash = None
 
 tab_analyzer, tab_builder, tab_generator, tab_assistant, tab_saved, tab_sources = st.tabs(
     ["Image Analyzer", "Outfit Builder", "Generate 5 Looks", "AI Style Assistant", "Saved Looks", "Sources"]
@@ -344,6 +416,7 @@ with tab_builder:
                 shirt_color=shirt_color,
                 pants_color=pants_color,
                 shoes_color=shoes_color,
+                feedback_context=feedback_context,
             )
 
             render_score_badge(score)
@@ -354,24 +427,54 @@ with tab_builder:
             for reason in reasons:
                 st.write(f"- {reason}")
 
-            if st.button("Save this outfit", use_container_width=True):
-                saved_backend = save_current_outfit(
-                    skin_tone=skin_tone,
-                    undertone=undertone,
-                    style=style,
-                    occasion=occasion,
-                    shirt_color=shirt_color,
-                    pants_color=pants_color,
-                    shoes_color=shoes_color,
-                    score=score,
-                )
-                st.session_state.refinement_source = None
-                if saved_backend == "supabase":
-                    st.success("Outfit saved to Supabase.")
-                elif storage_backend == "supabase" and is_authenticated():
-                    st.warning("Supabase save was unavailable, so the outfit was saved locally.")
-                else:
-                    st.success("Outfit saved locally.")
+            save_col, like_col, unlike_col = st.columns(3, gap="small")
+            with save_col:
+                if st.button("Save this outfit", use_container_width=True):
+                    saved_backend = save_current_outfit(
+                        skin_tone=skin_tone,
+                        undertone=undertone,
+                        style=style,
+                        occasion=occasion,
+                        shirt_color=shirt_color,
+                        pants_color=pants_color,
+                        shoes_color=shoes_color,
+                        score=score,
+                    )
+                    st.session_state.refinement_source = None
+                    if saved_backend == "supabase":
+                        st.success("Outfit saved to Supabase.")
+                    elif storage_backend == "supabase" and is_authenticated():
+                        st.warning("Supabase save was unavailable, so the outfit was saved locally.")
+                    else:
+                        st.success("Outfit saved locally.")
+            with like_col:
+                if st.button("Like this look", key="like_builder_look", use_container_width=True):
+                    record_current_feedback(
+                        skin_tone=skin_tone,
+                        undertone=undertone,
+                        style=style,
+                        occasion=occasion,
+                        shirt_color=shirt_color,
+                        pants_color=pants_color,
+                        shoes_color=shoes_color,
+                        score=score,
+                        feedback="like",
+                        source="manual_builder",
+                    )
+            with unlike_col:
+                if st.button("Not for me", key="unlike_builder_look", use_container_width=True):
+                    record_current_feedback(
+                        skin_tone=skin_tone,
+                        undertone=undertone,
+                        style=style,
+                        occasion=occasion,
+                        shirt_color=shirt_color,
+                        pants_color=pants_color,
+                        shoes_color=shoes_color,
+                        score=score,
+                        feedback="unlike",
+                        source="manual_builder",
+                    )
 
     with right_col:
         with st.container(border=True):
@@ -404,6 +507,7 @@ with tab_generator:
         style=style,
         occasion=occasion,
         limit=5,
+        feedback_context=feedback_context,
     )
 
     if suggestions:
@@ -444,16 +548,16 @@ with tab_generator:
                     for reason in outfit.get("reasons", [])[:2]:
                         st.write(f"- {reason}")
 
-                    refine_col, save_col = st.columns(2, gap="small")
+                    refine_col, save_col, like_col, unlike_col = st.columns(4, gap="small")
                     with refine_col:
-                        if st.button("Refine in Builder", key=f"refine_generated_{idx}", use_container_width=True):
+                        if st.button("Refine", key=f"refine_generated_{idx}", use_container_width=True):
                             st.session_state.builder_shirt_color = outfit["shirt_color"]
                             st.session_state.builder_pants_color = outfit["pants_color"]
                             st.session_state.builder_shoes_color = outfit["shoes_color"]
                             st.session_state.refinement_source = outfit
                             st.rerun()
                     with save_col:
-                        if st.button(f"Save Look {idx}", key=f"save_generated_{idx}", use_container_width=True):
+                        if st.button("Save", key=f"save_generated_{idx}", use_container_width=True):
                             saved_backend = save_current_outfit(
                                 skin_tone=skin_tone,
                                 undertone=undertone,
@@ -471,6 +575,34 @@ with tab_generator:
                                 st.warning(f"Supabase save was unavailable, so Look {idx} was saved locally.")
                             else:
                                 st.success(f"Look {idx} saved locally.")
+                    with like_col:
+                        if st.button("Like", key=f"like_generated_{idx}", use_container_width=True):
+                            record_current_feedback(
+                                skin_tone=skin_tone,
+                                undertone=undertone,
+                                style=style,
+                                occasion=occasion,
+                                shirt_color=outfit["shirt_color"],
+                                pants_color=outfit["pants_color"],
+                                shoes_color=outfit["shoes_color"],
+                                score=outfit["score"],
+                                feedback="like",
+                                source="generated_look",
+                            )
+                    with unlike_col:
+                        if st.button("Not for me", key=f"unlike_generated_{idx}", use_container_width=True):
+                            record_current_feedback(
+                                skin_tone=skin_tone,
+                                undertone=undertone,
+                                style=style,
+                                occasion=occasion,
+                                shirt_color=outfit["shirt_color"],
+                                pants_color=outfit["pants_color"],
+                                shoes_color=outfit["shoes_color"],
+                                score=outfit["score"],
+                                feedback="unlike",
+                                source="generated_look",
+                            )
 
 with tab_assistant:
     render_section_intro(
@@ -531,6 +663,35 @@ with tab_saved:
                     st.write(f"**Pants:** {humanize_value(outfit['pants_color'])}")
                     st.write(f"**Shoes:** {humanize_value(outfit['shoes_color'])}")
                     st.caption(f"Saved at: {outfit['created_at']}")
+                    saved_like_col, saved_unlike_col = st.columns(2, gap="small")
+                    with saved_like_col:
+                        if st.button("Like saved look", key=f"like_saved_{outfit['id']}", use_container_width=True):
+                            record_current_feedback(
+                                skin_tone=normalize_skin_tone(str(outfit["skin_tone"])),
+                                undertone=str(outfit["undertone"]),
+                                style=str(outfit["style"]),
+                                occasion=str(outfit["occasion"]),
+                                shirt_color=str(outfit["shirt_color"]),
+                                pants_color=str(outfit["pants_color"]),
+                                shoes_color=str(outfit["shoes_color"]),
+                                score=int(outfit["score"]),
+                                feedback="like",
+                                source="saved_look",
+                            )
+                    with saved_unlike_col:
+                        if st.button("Not for me", key=f"unlike_saved_{outfit['id']}", use_container_width=True):
+                            record_current_feedback(
+                                skin_tone=normalize_skin_tone(str(outfit["skin_tone"])),
+                                undertone=str(outfit["undertone"]),
+                                style=str(outfit["style"]),
+                                occasion=str(outfit["occasion"]),
+                                shirt_color=str(outfit["shirt_color"]),
+                                pants_color=str(outfit["pants_color"]),
+                                shoes_color=str(outfit["shoes_color"]),
+                                score=int(outfit["score"]),
+                                feedback="unlike",
+                                source="saved_look",
+                            )
 
                 with preview_col:
                     saved_avatar = render_avatar(

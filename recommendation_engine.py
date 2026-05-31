@@ -38,10 +38,64 @@ def _preferred_profile(undertone: str, style: str, occasion: str) -> dict[str, A
     }
 
 
+def _bounded(value: float, lower: int, upper: int) -> int:
+    return max(lower, min(upper, round(value)))
+
+
+def _feedback_color_points(
+    feedback_context: dict[str, Any] | None,
+    color: str,
+    slot: str | None = None,
+) -> float:
+    if not feedback_context:
+        return 0.0
+
+    color_scores = feedback_context.get("color_scores", {})
+    points = float(color_scores.get(color, 0))
+    if slot:
+        slot_scores = feedback_context.get("slot_color_scores", {}).get(slot, {})
+        points += float(slot_scores.get(color, 0)) * 1.15
+    return points
+
+
+def _feedback_rank_adjustment(feedback_context: dict[str, Any] | None, color: str) -> int:
+    points = _feedback_color_points(feedback_context, color, slot="shirt")
+    return _bounded(points * 0.9, -14, 16)
+
+
+def _feedback_alignment_score(
+    feedback_context: dict[str, Any] | None,
+    slot: str,
+    color: str,
+) -> tuple[int, str | None]:
+    points = _feedback_color_points(feedback_context, color, slot=slot)
+    if points >= 8:
+        return 10, f"{_humanize(color)} is boosted by your previous likes."
+    if points >= 4:
+        return 5, f"{_humanize(color)} reflects a color you have liked before."
+    if points <= -8:
+        return -15, f"{_humanize(color)} is reduced because you marked similar looks as not for you."
+    if points <= -4:
+        return -8, f"{_humanize(color)} is slightly reduced by your feedback history."
+    return 0, None
+
+
+def _outfit_feedback_strength(
+    feedback_context: dict[str, Any] | None,
+    outfit: dict[str, Any],
+) -> float:
+    return (
+        _feedback_color_points(feedback_context, outfit["shirt_color"], "shirt")
+        + _feedback_color_points(feedback_context, outfit["pants_color"], "pants")
+        + _feedback_color_points(feedback_context, outfit["shoes_color"], "shoes")
+    )
+
+
 def get_recommended_colors(
     undertone: str,
     style: str,
     occasion: str,
+    feedback_context: dict[str, Any] | None = None,
 ) -> list[str]:
     profile = _preferred_profile(undertone, style, occasion)
     weighted_colors: dict[str, int] = {}
@@ -59,6 +113,11 @@ def get_recommended_colors(
     for left, right in COLOR_THEORY_RULES.get("universal_pairs", []):
         weighted_colors[left] = weighted_colors.get(left, 0) + 1
         weighted_colors[right] = weighted_colors.get(right, 0) + 1
+    if feedback_context:
+        for color in ALL_COLORS:
+            adjustment = _feedback_rank_adjustment(feedback_context, color)
+            if adjustment:
+                weighted_colors[color] = weighted_colors.get(color, 0) + adjustment
     ranked_colors = sorted(
         weighted_colors.items(),
         key=lambda item: (-item[1], -_color_brightness(item[0]), item[0]),
@@ -217,9 +276,10 @@ def score_breakdown(
     shirt_color: str,
     pants_color: str,
     shoes_color: str,
+    feedback_context: dict[str, Any] | None = None,
 ) -> tuple[int, list[str]]:
     profile = _preferred_profile(undertone, style, occasion)
-    recommended = set(get_recommended_colors(undertone, style, occasion))
+    recommended = set(get_recommended_colors(undertone, style, occasion, feedback_context=feedback_context))
     avoided = set(get_avoid_colors(undertone))
     score = 45
     reasons: list[str] = []
@@ -229,6 +289,10 @@ def score_breakdown(
         score += color_score
         if color_reason:
             reasons.append(f"{label}: {color_reason}")
+        feedback_score, feedback_reason = _feedback_alignment_score(feedback_context, label.lower(), color)
+        score += feedback_score
+        if feedback_reason:
+            reasons.append(f"{label}: {feedback_reason}")
 
     harmony_score, _, harmony_reason = _evaluate_harmony(shirt_color, pants_color)
     score += harmony_score
@@ -263,6 +327,7 @@ def calculate_outfit_score(
     shirt_color: str,
     pants_color: str,
     shoes_color: str,
+    feedback_context: dict[str, Any] | None = None,
 ) -> int:
     score, _ = score_breakdown(
         skin_tone=skin_tone,
@@ -272,6 +337,7 @@ def calculate_outfit_score(
         shirt_color=shirt_color,
         pants_color=pants_color,
         shoes_color=shoes_color,
+        feedback_context=feedback_context,
     )
     return score
 
@@ -282,9 +348,10 @@ def generate_outfit_suggestions(
     style: str,
     occasion: str,
     limit: int = 5,
+    feedback_context: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     profile = _preferred_profile(undertone, style, occasion)
-    recommended = get_recommended_colors(undertone, style, occasion)
+    recommended = get_recommended_colors(undertone, style, occasion, feedback_context=feedback_context)
     top_candidates = recommended[:10] if len(recommended) >= 10 else recommended
     pant_candidates = [
         color
@@ -323,6 +390,7 @@ def generate_outfit_suggestions(
             shirt_color=shirt_color,
             pants_color=pants_color,
             shoes_color=shoes_color,
+            feedback_context=feedback_context,
         )
         _, harmony_label, _ = _evaluate_harmony(shirt_color, pants_color)
         explanation = build_outfit_explanation(
@@ -351,6 +419,7 @@ def generate_outfit_suggestions(
     candidates.sort(
         key=lambda outfit: (
             -outfit["score"],
+            -_outfit_feedback_strength(feedback_context, outfit),
             recommended.index(outfit["shirt_color"]) if outfit["shirt_color"] in recommended else 999,
             outfit["pants_color"],
             outfit["shoes_color"],
