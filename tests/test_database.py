@@ -14,7 +14,7 @@ def test_local_save_and_fetch_outfits(tmp_path, monkeypatch):
     monkeypatch.setattr(database, "supabase_is_configured", lambda: False)
 
     database.init_db()
-    database.save_outfit(
+    backend = database.save_outfit(
         skin_tone="medium",
         undertone="neutral",
         style="casual",
@@ -30,6 +30,7 @@ def test_local_save_and_fetch_outfits(tmp_path, monkeypatch):
 
     outfits = database.get_saved_outfits("demo-user")
 
+    assert backend == "local"
     assert db_path.exists()
     assert len(outfits) == 1
     assert outfits[0]["user_id"] == "demo-user"

@@ -94,7 +94,7 @@ def save_outfit(
     source: str = "manual_builder",
     explanation: str | None = None,
     metadata: dict[str, Any] | None = None,
-) -> None:
+) -> str:
     del metadata
 
     profile = UserProfile(
@@ -115,7 +115,7 @@ def save_outfit(
             get_supabase().table("saved_outfits").insert(
                 _supabase_payload(profile, outfit, explanation, source, user_id, username)
             ).execute()
-            return
+            return "supabase"
         except Exception:
             pass
 
@@ -152,6 +152,7 @@ def save_outfit(
                 source,
             ),
         )
+    return "local"
 
 
 def get_saved_outfits(user_id: str = "local-user") -> list[dict[str, object]]:

@@ -81,8 +81,8 @@ def save_current_outfit(
     shoes_color: str,
     score: int,
     explanation: str | None = None,
-) -> None:
-    save_outfit(
+) -> str:
+    return save_outfit(
         skin_tone=skin_tone,
         undertone=undertone,
         style=style,
@@ -355,7 +355,7 @@ with tab_builder:
                 st.write(f"- {reason}")
 
             if st.button("Save this outfit", use_container_width=True):
-                save_current_outfit(
+                saved_backend = save_current_outfit(
                     skin_tone=skin_tone,
                     undertone=undertone,
                     style=style,
@@ -366,8 +366,10 @@ with tab_builder:
                     score=score,
                 )
                 st.session_state.refinement_source = None
-                if storage_backend == "supabase" and is_authenticated():
+                if saved_backend == "supabase":
                     st.success("Outfit saved to Supabase.")
+                elif storage_backend == "supabase" and is_authenticated():
+                    st.warning("Supabase save was unavailable, so the outfit was saved locally.")
                 else:
                     st.success("Outfit saved locally.")
 
@@ -452,7 +454,7 @@ with tab_generator:
                             st.rerun()
                     with save_col:
                         if st.button(f"Save Look {idx}", key=f"save_generated_{idx}", use_container_width=True):
-                            save_current_outfit(
+                            saved_backend = save_current_outfit(
                                 skin_tone=skin_tone,
                                 undertone=undertone,
                                 style=style,
@@ -463,8 +465,10 @@ with tab_generator:
                                 score=outfit["score"],
                                 explanation=outfit["explanation"],
                             )
-                            if storage_backend == "supabase" and is_authenticated():
+                            if saved_backend == "supabase":
                                 st.success(f"Look {idx} saved to Supabase.")
+                            elif storage_backend == "supabase" and is_authenticated():
+                                st.warning(f"Supabase save was unavailable, so Look {idx} was saved locally.")
                             else:
                                 st.success(f"Look {idx} saved locally.")
 

@@ -1,80 +1,71 @@
 # StyleMatch AI
 
-StyleMatch AI is a Streamlit application for tone-aware outfit exploration. It combines image-based complexion estimation, a structured local style knowledge base, rule-driven outfit recommendations, and an avatar preview workflow in one polished interface.
+StyleMatch AI is a Streamlit application for tone-aware outfit exploration. It combines image-based complexion estimation, structured local style rules, outfit scoring, generated looks, avatar previews, Supabase account support, and local SQLite fallback storage.
 
 https://stylematch-ai-h9lu.onrender.com/
 
-<img width="350" height="150" alt="logo" src="https://github.com/user-attachments/assets/53defc2c-f900-45da-80f9-531bf7ebd2a6" />
-<img width="1762" height="509" alt="image" src="https://github.com/user-attachments/assets/279cde1c-a6d2-40bc-bbf6-861f864c63c4" />
-
-## What the app does
+## What the App Does
 
 - analyzes an uploaded portrait to estimate skin tone and undertone
 - surfaces reliability warnings when lighting or sampling quality is weak
-- recommends color palettes grounded in local style knowledge files
+- recommends color palettes from local style knowledge files
 - scores manual outfits against undertone, contrast, style, and occasion rules
 - generates five distinct outfit directions with short explanations
 - renders a layered avatar preview for manual looks and generated suggestions
-- saves selected looks locally in SQLite
-
-## Product principles
-
-- Honest UX: low-confidence image reads are shown as best estimates, not facts
-- Structured reasoning: recommendations use explicit local rules instead of vague text
-- Maintainable code: domain rules, image analysis, rendering, and UI helpers are separated
-- Portfolio realism: the README and code make realistic claims and document limitations
+- supports Supabase sign up and login
+- keeps nicknames unique through a Supabase `user_profiles` table
+- saves authenticated looks to Supabase when configured
+- falls back to local SQLite storage when Supabase storage is unavailable
 
 ## Architecture
 
 ```text
-stylematch_ai_v2/
-├── app.py                   # Streamlit orchestration and page flow
-├── ui_components.py         # Theme, layout helpers, branded UI primitives
-├── image_analysis.py        # Portrait loading, skin sampling, quality checks, confidence scoring
-├── recommendation_engine.py # Color ranking, harmony logic, scoring, generated looks
-├── style_assistant.py       # Grounded assistant responses built from project knowledge
-├── knowledge_base.py        # Loads local JSON rule files
-├── style_knowledge/         # Color theory, undertone, style, occasion, explanation data
-├── avatar_renderer.py       # Layered avatar rendering and garment placement
-├── database.py              # Local SQLite persistence
-├── models.py                # Core validation dataclasses
-├── catalog.py               # Shared color, tone, and option catalogs
-├── assets/                  # Brand assets
-├── avatar_assets/           # Base avatar and clothing overlays
-└── tests/                   # Focused regression tests
+StyleMatch-AI/
+|-- app.py                         # Streamlit page flow and active UI orchestration
+|-- ui_components.py               # Theme, layout helpers, branded UI primitives
+|-- image_analysis.py              # Portrait loading, skin sampling, quality checks
+|-- recommendation_engine.py       # Color ranking, harmony logic, scoring, generated looks
+|-- style_assistant.py             # Grounded assistant responses from project knowledge
+|-- knowledge_base.py              # Loads local JSON rule files
+|-- style_knowledge/               # Color, undertone, style, occasion, explanation data
+|-- avatar_renderer.py             # Layered avatar rendering and garment placement
+|-- database.py                    # Supabase saved-look sync with SQLite fallback
+|-- supabase_client.py             # Supabase URL/key loading and client creation
+|-- supabase_auth_service.py       # Supabase Auth sign up/login flow
+|-- supabase_profile_repository.py # Nickname/profile storage in user_profiles
+|-- session_manager.py             # Streamlit session state for guest/auth users
+|-- models.py                      # Core validation dataclasses
+|-- catalog.py                     # Shared color, tone, and option catalogs
+|-- supabase_schema.sql            # Required Supabase tables
+|-- assets/                        # Brand assets
+|-- avatar_assets/                 # Base avatar and clothing overlays
+|-- tests/                         # Focused regression tests
 ```
 
-## Key modules
+The active persistence model is Supabase plus local SQLite fallback. The app does not use MongoDB, standalone PostgreSQL, or a custom password database.
 
-### `image_analysis.py`
+## Supabase Setup
 
-Implements a multi-stage heuristic pipeline:
+Set these secrets in Streamlit locally or as Render environment variables:
 
-1. load and validate the upload
-2. attempt a face-focused crop using OpenCV Haar cascades
-3. build a combined skin mask in YCrCb and HSV space
-4. sample stable zones such as forehead and cheeks when possible
-5. reject highlight-heavy and shadow-heavy pixels
-6. estimate dominant skin color, skin tone, and undertone
-7. compute reliability signals for flash, low light, contrast, color cast, and unstable sampling
+```text
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your-anon-or-publishable-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
 
-This is still heuristic image analysis, not a clinical or biometric system. The app exposes warnings and confidence instead of pretending otherwise.
+`SUPABASE_URL` must be the base project URL only, not a dashboard URL and not an `/auth/v1` or `/rest/v1` endpoint. `SUPABASE_KEY` is used for Supabase Auth. `SUPABASE_SERVICE_ROLE_KEY` is used server-side for profile and saved-look table access, so keep it out of Git.
 
-### `recommendation_engine.py`
+Run the SQL in `supabase_schema.sql` in the Supabase SQL editor. The app expects:
 
-Uses a structured local knowledge base to score outfits against:
+- `public.user_profiles` for email and nickname uniqueness
+- `public.saved_outfits` for cloud-saved looks
 
-- undertone compatibility
-- style and occasion preferences
-- contrast against the estimated skin tone
-- color harmony patterns such as analogous, complementary, and monochromatic relationships
-- shoe neutrality and versatility
+If email confirmation is enabled in Supabase Auth, new users must confirm email before logging in. For local testing, you can disable email confirmation in Supabase Auth settings.
 
-Generated looks are filtered to stay meaningfully distinct from one another.
+## Local Secrets
 
-### `avatar_renderer.py`
-
-Builds a dressed avatar from a base body plus transparent clothing overlays. Each overlay is cropped to visible alpha content before placement so asset tuning remains maintainable.
+For local Streamlit development, copy `streamlit_secrets.example.toml` to `.streamlit/secrets.toml` and fill in real values. `.streamlit/secrets.toml` is ignored and must not be committed.
 
 ## Setup
 
@@ -96,42 +87,34 @@ python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 ```
 
-## Run the app
+## Run the App
 
 ```bash
 streamlit run app.py
 ```
 
-## Run tests
+On Linux, macOS, or Render-style shells, this is also valid after dependencies are installed:
+
+```bash
+./.venv/bin/python -m streamlit run app.py
+```
+
+## Run Tests
 
 ```bash
 pytest -q
 ```
 
-## Local knowledge base
+## Deployment Notes
 
-The recommendation system is grounded in local JSON files under `style_knowledge/`.
+- Keep `.streamlit/secrets.toml`, `.venv`, `node_modules`, cache folders, and local DB files out of Git.
+- Configure Supabase secrets in Render environment variables.
+- Use the base Supabase project URL and the anon/publishable key plus service-role key described above.
+- The app still runs without Supabase secrets, but account login and cloud-saved looks are disabled and saved looks remain local.
 
-- `color_theory_rules.json`
-- `undertone_rules.json`
-- `style_rules.json`
-- `occasion_rules.json`
-- `color_metadata.json`
-- `explanation_templates.json`
+## Known Limitations
 
-This makes the behavior transparent, editable, and safe to extend without retraining or hidden dependencies.
-
-## Repository strengths
-
-- recruiter-friendly separation between UI, domain rules, rendering, and persistence
-- explicit quality/confidence signals in the image-analysis flow
-- local rule files that make recommendation behavior inspectable
-- focused tests for recommendations, persistence, rendering, and image-analysis outputs
-- premium but restrained Streamlit UI with custom styling
-
-## Known limitations
-
-- skin tone and undertone estimation remain heuristic and lighting-sensitive
-- face detection uses a lightweight classical OpenCV detector rather than a dedicated face parsing model
-- avatar realism depends on the quality of the supplied clothing overlay assets
-- recommendation logic is rule-based, so it is explainable but not trend-aware or personalized over time
+- skin tone and undertone estimation are heuristic and lighting-sensitive
+- face detection uses a lightweight OpenCV detector rather than a dedicated face parsing model
+- avatar realism depends on the supplied clothing overlay assets
+- recommendation logic is rule-based, explainable, and not trend-aware
