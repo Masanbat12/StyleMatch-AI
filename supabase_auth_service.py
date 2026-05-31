@@ -3,6 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 from supabase_client import SupabaseConfigurationError, get_supabase_auth_client
+from supabase_profile_repository import (
+    DuplicateProfileError,
+    ProfileTableMissingError,
+    SupabaseProfileRepository,
+)
 
 
 MIN_PASSWORD_LENGTH = 8
@@ -65,11 +70,50 @@ def _response_user(response: Any) -> Any:
 class SupabaseAuthService:
     def __init__(self) -> None:
         self.client = get_supabase_auth_client()
+        self.profile_repository = SupabaseProfileRepository()
+
+    def _ensure_profile_storage_ready(self) -> None:
+        try:
+            self.profile_repository.ensure_signup_ready()
+        except ProfileTableMissingError as exc:
+            raise AuthenticationError(
+                "Supabase profile storage is missing. Create the public.user_profiles table from the README before using account sign-up."
+            ) from exc
+
+    def _ensure_nickname_available(self, display_name: str) -> None:
+        try:
+            if self.profile_repository.username_exists(display_name):
+                raise AuthenticationError("That nickname is already in use.")
+        except ProfileTableMissingError as exc:
+            raise AuthenticationError(
+                "Supabase profile storage is missing. Create the public.user_profiles table from the README before using account sign-up."
+            ) from exc
+
+    def _sync_profile(self, user_id: str, email: str, display_name: str) -> dict[str, str]:
+        try:
+            profile = self.profile_repository.upsert_profile(user_id, email, display_name)
+        except DuplicateProfileError as exc:
+            if exc.field == "username":
+                raise AuthenticationError("That nickname is already in use.") from exc
+            if exc.field == "email":
+                raise AuthenticationError("That email is already registered.") from exc
+            raise AuthenticationError("That account profile already exists.") from exc
+        except ProfileTableMissingError as exc:
+            raise AuthenticationError(
+                "Supabase profile storage is missing. Create the public.user_profiles table from the README before using account sign-up."
+            ) from exc
+
+        return {
+            "id": user_id,
+            "username": str(profile.get("username") or display_name),
+        }
 
     def register_user(self, email: str, password: str, display_name: str) -> dict[str, str]:
         normalized_email = _normalize_email(email)
         _validate_password(password)
         normalized_display_name = _normalize_display_name(display_name)
+        self._ensure_profile_storage_ready()
+        self._ensure_nickname_available(normalized_display_name)
 
         try:
             response = self.client.auth.sign_up(
@@ -98,15 +142,14 @@ class SupabaseAuthService:
         if user is None:
             raise AuthenticationError("The account could not be created.")
 
+        profile_user = self._sync_profile(str(user.id), normalized_email, normalized_display_name)
+
         if getattr(response, "session", None) is None:
             raise AuthenticationError(
                 "Account created. Confirm the email in Supabase Auth settings or disable email confirmation for local testing."
             )
 
-        return {
-            "id": str(user.id),
-            "username": _user_display_name(user, normalized_email),
-        }
+        return profile_user
 
     def authenticate_user(self, email: str, password: str) -> dict[str, str]:
         normalized_email = _normalize_email(email)
@@ -136,9 +179,25 @@ class SupabaseAuthService:
         if user is None:
             raise AuthenticationError("Incorrect email or password.")
 
+        username = _user_display_name(user, normalized_email)
+        try:
+            profile = self.profile_repository.get_by_user_id(str(user.id))
+        except ProfileTableMissingError:
+            profile = None
+
+        if profile and profile.get("username"):
+            username = str(profile["username"])
+        else:
+            try:
+                synced = self.profile_repository.upsert_profile(str(user.id), normalized_email, username)
+            except (ProfileTableMissingError, DuplicateProfileError):
+                synced = None
+            if synced and synced.get("username"):
+                username = str(synced["username"])
+
         return {
             "id": str(user.id),
-            "username": _user_display_name(user, normalized_email),
+            "username": username,
         }
 
 
