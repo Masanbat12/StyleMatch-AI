@@ -42,6 +42,8 @@ from ui_components import (
     render_sidebar_group_intro,
     render_skin_tone_picker,
     render_welcome_card,
+    render_palette_hero,
+    render_look_strip,
     card,
 )
 
@@ -267,28 +269,28 @@ occasion = st.session_state.occasion
 recommended_colors = get_recommended_colors(undertone, style, occasion)
 avoid_colors = get_avoid_colors(undertone)
 
-render_branded_header(
+if storage_backend == "supabase":
+    storage_status = (
+        "Saved looks sync to your account."
+        if is_authenticated()
+        else "Saved looks stay in this browser session. Sign in to keep them."
+    )
+else:
+    storage_status = "Saved looks stay on this device."
+
+occasion_phrase = {"daily": "every day", "date": "a date", "work": "work", "evening": "an evening out"}.get(occasion, humanize_value(occasion).lower())
+render_palette_hero(
     LOGO_PATH if LOGO_PATH.exists() else None,
-    "StyleMatch AI",
-    "Build outfits around your complexion and occasion.",
+    (
+        f"<strong>{humanize_value(skin_tone)} skin, {humanize_value(undertone).lower()} undertone.</strong> "
+        f"Colours chosen for a {humanize_value(style).lower()} look for {occasion_phrase}. "
+        "Change your profile in the sidebar and the palette follows."
+    ),
+    [(color, COLOR_MAP.get(color, "#888888")) for color in recommended_colors[:8]],
+    status=storage_status,
 )
 if auth_enabled and is_authenticated():
     render_welcome_card(current_username())
-render_profile_band(
-    {
-        "Skin Tone": skin_tone,
-        "Undertone": undertone,
-        "Style": style,
-        "Occasion": occasion,
-    }
-)
-if storage_backend == "supabase":
-    if is_authenticated():
-        render_note_chip("Supabase sync is active for your saved looks.")
-    else:
-        render_note_chip("Supabase sync is configured. Sign in to keep looks under your own account.")
-else:
-    render_note_chip("Local mode is active. Saved looks stay on this device.")
 
 tab_analyzer, tab_builder, tab_generator, tab_assistant, tab_saved, tab_sources = st.tabs(
     ["Image Analyzer", "Outfit Builder", "Generate 5 Looks", "AI Style Assistant", "Saved Looks", "Sources"]
@@ -296,15 +298,15 @@ tab_analyzer, tab_builder, tab_generator, tab_assistant, tab_saved, tab_sources 
 
 with tab_analyzer:
     render_section_intro(
-        "Image Atelier",
-        "Profile your complexion with a polished upload workflow",
-        "Drop in a well-lit portrait to estimate skin tone and undertone, then carry that profile straight into the recommendation engine.",
+        "",
+        "Find your skin tone from a photo",
+        "Upload a well-lit, front-facing portrait. We estimate skin tone and undertone, and you decide whether to use them.",
     )
     with card():
         render_panel_heading(
-            "Upload Studio",
-            "Analyze a front-facing portrait",
-            "Use natural lighting and a clear frontal angle for the most grounded result.",
+            "",
+            "Upload a portrait",
+            "Daylight and a straight-on angle give the most reliable reading.",
         )
         uploaded_file = st.file_uploader("Upload a clear front-facing image", type=["png", "jpg", "jpeg"])
 
@@ -322,9 +324,9 @@ with tab_analyzer:
             with info_col:
                 with card():
                     render_panel_heading(
-                        "Detected Profile",
-                        "Your complexion summary",
-                        "Use the detected profile directly in the styling flow, while keeping an eye on the reliability read below.",
+                        "",
+                        "What we found",
+                        "Check the confidence before you use it.",
                     )
                     if result["confidence_label"] == "high":
                         st.success("Analysis complete")
@@ -356,27 +358,27 @@ with tab_analyzer:
             with image_col:
                 with card():
                     render_panel_heading(
-                        "Visual Read",
-                        "Uploaded reference and swatch",
-                        "A quick visual confirmation of the photo used and the sampled complexion color.",
+                        "",
+                        "Your photo and sampled skin colour",
+                        "",
                     )
                     st.image(result["preview_image"], caption="Uploaded image", width="stretch")
                     st.image(result["swatch_image"], caption="Detected skin color swatch", width="content")
 
 with tab_builder:
     render_section_intro(
-        "Style Studio",
-        "Build a refined look with premium wardrobe controls",
-        "Choose dress and shoe colors for a complete one-piece look." if top_style == "dress" else f"Dial in {top_label.lower()}, {bottom_label.lower()}, and shoes while the engine explains why the palette works with your undertone and context.",
+        "",
+        "Build an outfit",
+        "Pick a dress and shoes. The score explains what works and what to change." if top_style == "dress" else f"Pick a {top_label.lower()}, {bottom_label.lower()} and shoes. The score explains what works and what to change.",
     )
     left_col, right_col = st.columns([1.06, 0.94], gap="large")
 
     with left_col:
         with card():
             render_panel_heading(
-                "Curate",
-                "Design your outfit combination",
-                "Start with recommended tones, then push the palette toward a more editorial direction if you want to experiment.",
+                "",
+                "Choose colours",
+                "Recommended colours are listed first in each menu.",
             )
             if st.session_state.refinement_source:
                 render_note_chip("Refining a generated look. Saving will add it to your local archive.")
@@ -426,9 +428,9 @@ with tab_builder:
     with right_col:
         with card():
             render_panel_heading(
-                "Avatar Preview",
-                "See the silhouette in context",
-                "A premium preview card for checking balance, contrast, and how the pieces land together visually.",
+                "",
+                "Preview",
+                "",
             )
             avatar = render_avatar(
                 avatar_model=avatar_model,
@@ -443,15 +445,15 @@ with tab_builder:
             )
             st.image(avatar, width="content")
             st.markdown(
-                '<div class="avatar-caption">Rendered from layered fashion assets tinted to your current outfit selection.</div>',
+                '<div class="avatar-caption">Colours update as you change them.</div>',
                 unsafe_allow_html=True,
             )
 
 with tab_generator:
     render_section_intro(
-        "Look Generator",
-        "Generate fast, premium-ready outfit directions",
-        "Explore automatically composed looks ranked by harmony, versatility, and contrast so you can shortlist ideas quickly.",
+        "",
+        "Five looks for your profile",
+        "Ranked by the scoring engine. Open one in the Builder to adjust it, or save it as it is.",
     )
     suggestions = (generate_dress_suggestions if top_style == "dress" else generate_outfit_suggestions)(
         skin_tone=skin_tone,
@@ -468,9 +470,9 @@ with tab_generator:
         with hero_col:
             with card("look"):
                 render_panel_heading(
-                    "Featured Avatar",
-                    "Top-ranked generated look",
-                    "Preview the strongest combination first, then compare the full set of five recommendations beside it.",
+                    "",
+                    "Best match",
+                    "",
                 )
                 featured_avatar = render_avatar(
                     avatar_model=avatar_model,
@@ -492,18 +494,17 @@ with tab_generator:
         with summary_col:
             for idx, outfit in enumerate(suggestions, start=1):
                 with card("look"):
-                    render_panel_heading(
-                        f"Look {idx}",
-                        f"{humanize_value(outfit['shirt_color'])}, {humanize_value(outfit['pants_color'])}, {humanize_value(outfit['shoes_color'])}",
-                        f"{humanize_value(outfit['harmony'])} harmony with a {outfit['score']}/100 match score.",
-                    )
-                    st.write(f"**{top_label}:** {humanize_value(outfit['shirt_color'])}")
+                    pieces = [(top_label, outfit["shirt_color"])]
                     if top_style != "dress":
-                        st.write(f"**{bottom_label}:** {humanize_value(outfit['pants_color'])}")
-                    st.write(f"**Shoes:** {humanize_value(outfit['shoes_color'])}")
-                    st.caption(outfit_display_text(outfit["explanation"], top_style, bottom_style))
-                    for reason in outfit.get("reasons", [])[:2]:
-                        st.write(f"- {outfit_display_text(reason, top_style, bottom_style)}")
+                        pieces.append((bottom_label, outfit["pants_color"]))
+                    pieces.append(("Shoes", outfit["shoes_color"]))
+                    render_look_strip(
+                        idx,
+                        outfit["score"],
+                        humanize_value(outfit["harmony"]),
+                        [(garment, color, COLOR_MAP.get(color, "#888888")) for garment, color in pieces],
+                        [outfit_display_text(r, top_style, bottom_style) for r in outfit.get("reasons", [])[:2]],
+                    )
 
                     refine_col, save_col = st.columns(2, gap="small")
                     with refine_col:
@@ -534,7 +535,7 @@ with tab_generator:
 
 with tab_assistant:
     render_section_intro(
-        "AI Concierge",
+        "",
         "Ask your stylist",
         "Answers use your profile, the colour rules, and the engine's score for the outfit in the Builder.",
     )
@@ -615,9 +616,9 @@ with tab_assistant:
 
 with tab_saved:
     render_section_intro(
-        "Saved Looks",
-        "Review your archived outfit decisions",
-        "A running wardrobe history of combinations you chose to keep, complete with profile context and avatar previews.",
+        "",
+        "Saved looks",
+        "Outfits you kept, with the profile they were made for.",
     )
     saved_outfits = get_saved_outfits(current_user_id())
 
@@ -668,9 +669,9 @@ with tab_saved:
 
 with tab_sources:
     render_section_intro(
-        "Knowledge Base",
-        "See the grounded references behind the recommendations",
-        "Each source helps keep the assistant and the palette logic tied to explicit color and styling guidance.",
+        "",
+        "Sources",
+        "The colour and dress-code references the scoring rules are based on.",
     )
     for source in SOURCES:
         with card():

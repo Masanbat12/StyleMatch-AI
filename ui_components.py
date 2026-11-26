@@ -85,911 +85,46 @@ def card(kind: str = "panel"):
     return st.container(border=True, key=f"sm-card-{kind}-{_card_counter['value']}")
 
 
+THEME_CSS_PATH = Path(__file__).resolve().parent / "assets" / "theme.css"
+
+
 def inject_theme(logo_path: str | Path | None = None) -> None:
     _card_counter["value"] = 0
+    css = THEME_CSS_PATH.read_text(encoding="utf-8")
     logo_data_uri = _image_to_data_uri(logo_path) if logo_path else ""
-    sidebar_logo_rule = ""
     if logo_data_uri:
-        sidebar_logo_rule = f"""
-        .sidebar-brand-mark {{
-            background-image: url('{logo_data_uri}');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-        }}
-        """
+        css = css.replace(
+            "/*SIDEBAR_LOGO*/",
+            ".sidebar-brand-mark { background: url('" + logo_data_uri + "') center / contain no-repeat; }",
+        )
+    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
+
+def render_palette_hero(
+    logo_path: str | Path | None,
+    profile_sentence: str,
+    palette: list[tuple[str, str]],
+    status: str = "",
+) -> None:
+    """Hero = the person's recommended palette as fabric swatches (the page's one signature moment)."""
+    enter_class = "" if st.session_state.get("_sm_hero_seen") else " sm-enter"
+    st.session_state["_sm_hero_seen"] = True
+    logo_data_uri = _image_to_data_uri(logo_path) if logo_path else ""
+    logo = f'<img src="{logo_data_uri}" alt="" />' if logo_data_uri else ""
+    swatches = "".join(
+        f'<div class="sm-swatch" style="--c:{escape(hex_value)};--i:{index}">'
+        f'<div class="sm-swatch-cloth"></div>'
+        f'<div class="sm-swatch-name">{escape(humanize_value(name))}</div></div>'
+        for index, (name, hex_value) in enumerate(palette)
+    )
+    status_html = f'<div class="sm-status">{escape(status)}</div>' if status else ""
     st.markdown(
-        f"""
-        <style>
-        :root {{
-            --sm-bg: #f5efe6;
-            --sm-surface: rgba(255, 252, 247, 0.88);
-            --sm-sidebar: #15110f;
-            --sm-ink: #261f1a;
-            --sm-muted: #7b6b5d;
-            --sm-gold: #c8a96a;
-            --sm-gold-deep: #9f7d42;
-            --sm-shadow: 0 18px 40px rgba(38, 31, 26, 0.08);
-            --sm-ease: cubic-bezier(0.22, 1, 0.36, 1);
-            --sm-gold-text: #765724;
-        }}
-
-        /* ---------- Motion ---------- */
-        @keyframes sm-rise {{
-            from {{ opacity: 0; transform: translateY(14px); }}
-            to {{ opacity: 1; transform: translateY(0); }}
-        }}
-
-        @keyframes sm-panel-in {{
-            from {{ opacity: 0; transform: translateY(6px); }}
-            to {{ opacity: 1; transform: translateY(0); }}
-        }}
-
-        @keyframes sm-fill {{
-            from {{ transform: scaleX(0); }}
-            to {{ transform: scaleX(1); }}
-        }}
-
-        @keyframes sm-sheen {{
-            0% {{ transform: translateX(-120%) skewX(-18deg); }}
-            100% {{ transform: translateX(320%) skewX(-18deg); }}
-        }}
-
-        @keyframes sm-pop {{
-            0% {{ opacity: 0; transform: scale(0.92); }}
-            100% {{ opacity: 1; transform: scale(1); }}
-        }}
-
-        @media (prefers-reduced-motion: reduce) {{
-            *, *::before, *::after {{
-                animation-duration: 1ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 1ms !important;
-            }}
-        }}
-
-        .stApp {{
-            background:
-                radial-gradient(circle at top left, rgba(210, 182, 130, 0.16), transparent 28%),
-                radial-gradient(circle at top right, rgba(204, 189, 162, 0.20), transparent 22%),
-                linear-gradient(180deg, #fbf8f3 0%, var(--sm-bg) 100%);
-            color: var(--sm-ink);
-        }}
-
-        .block-container {{
-            max-width: 1280px;
-            padding-top: 1.8rem;
-            padding-bottom: 3.2rem;
-            padding-left: 2.2rem;
-            padding-right: 2.2rem;
-        }}
-
-        [data-testid="stSidebar"] {{
-            background:
-                radial-gradient(circle at top, rgba(200, 169, 106, 0.18), transparent 24%),
-                linear-gradient(180deg, var(--sm-sidebar) 0%, #120f0d 100%);
-            border-right: 1px solid rgba(228, 205, 167, 0.12);
-            min-width: min(340px, calc(100vw - 2rem)) !important;
-            max-width: min(340px, calc(100vw - 2rem)) !important;
-        }}
-
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
-        [data-testid="stSidebar"] label,
-        [data-testid="stSidebar"] .stCaption {{
-            color: #f4eadb !important;
-        }}
-
-        [data-testid="stSidebar"] .stCaption {{
-            color: rgba(244, 234, 219, 0.72) !important;
-        }}
-
-        [data-testid="stSidebar"] div[data-baseweb="select"] > div,
-        [data-testid="stSidebar"] textarea {{
-            background: rgba(255, 250, 243, 0.07) !important;
-            border: 1px solid rgba(228, 205, 167, 0.16) !important;
-            border-radius: 16px !important;
-            box-shadow: none !important;
-            color: #fff7ec !important;
-        }}
-
-        [data-testid="stSidebar"] .stButton > button {{
-            width: 100%;
-            min-height: 2.95rem;
-            border-radius: 16px;
-            font-weight: 700;
-            font-size: 0.90rem;
-            padding: 0.5rem 0.7rem;
-            white-space: nowrap;
-            line-height: 1.1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }}
-
-        .sidebar-brand {{
-            display: flex;
-            align-items: center;
-            gap: 0.95rem;
-            padding: 0.4rem 0 1rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid rgba(228, 205, 167, 0.12);
-        }}
-
-        .sidebar-brand-mark {{
-            width: 54px;
-            height: 54px;
-            border-radius: 18px;
-            background-color: rgba(255, 250, 243, 0.06);
-            box-shadow: inset 0 0 0 1px rgba(228, 205, 167, 0.08);
-            flex: 0 0 auto;
-        }}
-
-        {sidebar_logo_rule}
-
-        .sidebar-brand-copy {{
-            display: flex;
-            flex-direction: column;
-            gap: 0.15rem;
-        }}
-
-        .sidebar-brand-title {{
-            color: #fff8eb;
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: 1.02rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-        }}
-
-        .sidebar-brand-subtitle {{
-            color: rgba(244, 234, 219, 0.72);
-            font-size: 0.82rem;
-        }}
-
-        .sidebar-group-label {{
-            margin-top: 1.35rem;
-            margin-bottom: 0.5rem;
-            color: #d8c39d;
-            font-size: 0.78rem;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            font-weight: 700;
-        }}
-
-        .sidebar-control-copy {{
-            color: rgba(244, 234, 219, 0.74);
-            font-size: 0.8rem;
-            line-height: 1.45;
-            margin: 0 0 0.7rem;
-        }}
-
-        .sidebar-swatch-grid {{
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }}
-
-        .sidebar-swatch-card {{
-            background: rgba(255, 250, 243, 0.05);
-            border: 1px solid rgba(228, 205, 167, 0.14);
-            border-radius: 16px;
-            padding: 0.62rem 0.72rem;
-        }}
-
-        .sidebar-swatch-head {{
-            display: flex;
-            align-items: center;
-            gap: 0.55rem;
-        }}
-
-        .sidebar-swatch-dot {{
-            width: 16px;
-            height: 16px;
-            border-radius: 999px;
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 4px 10px rgba(0,0,0,0.18);
-            flex: 0 0 auto;
-        }}
-
-        .sidebar-swatch-label {{
-            color: #fff4e5;
-            font-size: 0.88rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }}
-
-        .sidebar-chip-row {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.55rem;
-            margin-bottom: 0.6rem;
-        }}
-
-        .sidebar-chip-note {{
-            color: rgba(244, 234, 219, 0.62);
-            font-size: 0.78rem;
-            margin-top: -0.15rem;
-            margin-bottom: 0.6rem;
-        }}
-
-        .brand-shell {{
-            background: linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(250, 244, 235, 0.82));
-            border: 1px solid rgba(200, 169, 106, 0.18);
-            border-radius: 32px;
-            padding: 1.45rem 2rem 1.25rem;
-            box-shadow: var(--sm-shadow);
-            text-align: center;
-            margin: 0 auto 1.1rem;
-            max-width: 920px;
-            position: relative;
-            overflow: hidden;
-        }}
-
-        .brand-shell.sm-enter {{
-            animation: sm-rise 700ms var(--sm-ease) both;
-        }}
-
-        .brand-shell.sm-enter::after {{
-            content: "";
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            width: 22%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-            animation: sm-sheen 1400ms 450ms var(--sm-ease) 1 both;
-            pointer-events: none;
-        }}
-
-        .brand-logo {{
-            animation: sm-pop 600ms 120ms var(--sm-ease) both;
-        }}
-
-        .profile-band {{
-            animation: sm-rise 600ms 160ms var(--sm-ease) both;
-        }}
-
-        .profile-pill {{
-            transition: transform 200ms var(--sm-ease), border-color 200ms var(--sm-ease);
-        }}
-
-        .profile-pill:hover {{
-            transform: translateY(-2px);
-            border-color: rgba(200, 169, 106, 0.38);
-        }}
-
-        .brand-shell::before {{
-            content: "";
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(circle at top center, rgba(200, 169, 106, 0.12), transparent 30%),
-                linear-gradient(135deg, rgba(255, 255, 255, 0.48), transparent 55%);
-            pointer-events: none;
-        }}
-
-        .brand-logo {{
-            width: min(82px, 24vw);
-            height: auto;
-            margin: 0 auto 0.75rem;
-            display: block;
-            filter: drop-shadow(0 10px 16px rgba(39, 29, 18, 0.08));
-        }}
-
-        .brand-kicker {{
-            color: var(--sm-gold-deep);
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.14em;
-            font-weight: 700;
-            margin-bottom: 0.45rem;
-        }}
-
-        .brand-title {{
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: clamp(2rem, 4vw, 3.25rem);
-            line-height: 1.04;
-            margin: 0;
-        }}
-
-        .brand-subtitle {{
-            max-width: 560px;
-            margin: 0.55rem auto 0;
-            color: var(--sm-muted);
-            font-size: 0.95rem;
-            line-height: 1.55;
-        }}
-
-        .profile-band {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            margin: 0.35rem 0 1.35rem;
-        }}
-
-        .profile-pill {{
-            background: rgba(255, 250, 243, 0.76);
-            border: 1px solid rgba(200, 169, 106, 0.16);
-            border-radius: 999px;
-            padding: 0.62rem 0.95rem;
-            box-shadow: 0 10px 24px rgba(38, 31, 26, 0.05);
-            min-width: 146px;
-            white-space: nowrap;
-        }}
-
-        .profile-pill-label {{
-            color: var(--sm-gold-deep);
-            font-size: 0.72rem;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 0.18rem;
-        }}
-
-        .profile-pill-value {{
-            color: var(--sm-ink);
-            font-weight: 600;
-            text-transform: capitalize;
-            white-space: nowrap;
-        }}
-
-        .welcome-card {{
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 1rem 1.15rem;
-            margin: 0.2rem 0 1rem;
-            border-radius: 24px;
-            background: linear-gradient(135deg, rgba(255, 250, 243, 0.94), rgba(245, 235, 214, 0.88));
-            border: 1px solid rgba(200, 169, 106, 0.18);
-            box-shadow: 0 14px 30px rgba(38, 31, 26, 0.06);
-        }}
-
-        .welcome-copy {{
-            min-width: 0;
-        }}
-
-        .welcome-kicker {{
-            color: var(--sm-gold-deep);
-            font-size: 0.72rem;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 0.22rem;
-        }}
-
-        .welcome-title {{
-            color: var(--sm-ink);
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: clamp(1.2rem, 2.2vw, 1.55rem);
-            line-height: 1.15;
-            margin: 0;
-        }}
-
-        .welcome-subtitle {{
-            color: var(--sm-muted);
-            margin-top: 0.3rem;
-            font-size: 0.92rem;
-            line-height: 1.55;
-        }}
-
-        .welcome-badge {{
-            flex: 0 0 auto;
-            border-radius: 999px;
-            padding: 0.48rem 0.85rem;
-            background: rgba(255, 255, 255, 0.78);
-            border: 1px solid rgba(200, 169, 106, 0.2);
-            color: var(--sm-gold-deep);
-            font-size: 0.78rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }}
-
-        .section-kicker {{
-            color: var(--sm-gold-deep);
-            font-size: 0.78rem;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }}
-
-        .section-title {{
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: clamp(1.55rem, 2vw, 2.2rem);
-            line-height: 1.08;
-            margin-bottom: 0.45rem;
-        }}
-
-        .section-copy {{
-            color: var(--sm-muted);
-            max-width: 760px;
-            line-height: 1.7;
-            margin-bottom: 0.4rem;
-        }}
-
-        .panel-heading {{
-            margin-bottom: 1rem;
-        }}
-
-        .panel-eyebrow {{
-            color: var(--sm-gold-deep);
-            font-size: 0.74rem;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 0.3rem;
-        }}
-
-        .panel-title {{
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: 1.32rem;
-            margin-bottom: 0.25rem;
-        }}
-
-        .panel-copy {{
-            color: var(--sm-muted);
-            line-height: 1.6;
-            margin-bottom: 0;
-        }}
-
-        /* ---------- Cards (keyed bordered containers, see card()) ---------- */
-        [class*="st-key-sm-card-"] {{
-            background: var(--sm-surface);
-            border: 1px solid rgba(200, 169, 106, 0.18) !important;
-            border-radius: 28px !important;
-            padding: 1.35rem 1.4rem 1.25rem !important;
-            box-shadow: var(--sm-shadow);
-            backdrop-filter: blur(8px);
-            transition: transform 260ms var(--sm-ease), box-shadow 260ms var(--sm-ease),
-                border-color 260ms var(--sm-ease);
-        }}
-
-        [class*="st-key-sm-card-look-"]:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 24px 48px rgba(38, 31, 26, 0.11);
-            border-color: rgba(200, 169, 106, 0.34) !important;
-        }}
-
-        /* ---------- Streamlit chrome ---------- */
-        [data-testid="stHeader"] {{
-            background: transparent;
-        }}
-
-        [data-testid="stSidebar"] [data-testid="stCaptionContainer"],
-        [data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {{
-            color: rgba(244, 234, 219, 0.70) !important;
-        }}
-
-        [data-testid="stSidebar"] [data-testid="stRadioOption"] p,
-        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {{
-            color: #f4eadb !important;
-        }}
-
-        /* ---------- Tabs (segmented pill control) ---------- */
-        [data-testid="stTabs"] [role="tablist"] {{
-            gap: 0.35rem;
-            background: rgba(255, 250, 243, 0.78);
-            border: 1px solid rgba(200, 169, 106, 0.18);
-            border-radius: 999px;
-            padding: 0.35rem;
-            box-shadow: 0 12px 24px rgba(38, 31, 26, 0.05);
-            width: fit-content;
-            max-width: 100%;
-            overflow-x: auto;
-            scrollbar-width: none;
-            margin-bottom: 1.2rem;
-        }}
-
-        [data-testid="stTabs"] [role="tablist"] > :not([role="tab"]) {{
-            display: none;
-        }}
-
-        [data-testid="stTab"] {{
-            border-radius: 999px !important;
-            color: var(--sm-muted) !important;
-            font-weight: 600 !important;
-            min-height: 2.6rem !important;
-            padding: 0 1.1rem !important;
-            border: none !important;
-            white-space: nowrap;
-            transition: background-color 220ms var(--sm-ease), color 220ms var(--sm-ease),
-                box-shadow 220ms var(--sm-ease);
-        }}
-
-        [data-testid="stTab"] .react-aria-SelectionIndicator {{
-            display: none !important;
-        }}
-
-        [data-testid="stTab"] p {{
-            color: inherit !important;
-            font-weight: inherit !important;
-        }}
-
-        [data-testid="stTab"]:hover {{
-            background: rgba(200, 169, 106, 0.12);
-            color: var(--sm-ink) !important;
-        }}
-
-        [data-testid="stTab"][aria-selected="true"] {{
-            background: linear-gradient(135deg, #f0d59d 0%, #c7a05b 100%) !important;
-            color: #241b13 !important;
-            box-shadow: 0 8px 16px rgba(163, 126, 59, 0.26);
-        }}
-
-        [data-testid="stTabPanel"] {{
-            animation: sm-panel-in 320ms var(--sm-ease) both;
-        }}
-
-        [data-testid="stFileUploaderDropzone"] {{
-            border-radius: 24px !important;
-            border: 1.5px dashed rgba(200, 169, 106, 0.42) !important;
-            background: linear-gradient(180deg, rgba(255, 250, 243, 0.90), rgba(249, 241, 229, 0.86)) !important;
-            padding: 1.2rem !important;
-        }}
-
-        .stButton > button {{
-            border-radius: 999px;
-            border: none;
-            background: linear-gradient(135deg, #edd39a 0%, #c7a05b 100%);
-            color: #241b13;
-            font-weight: 700;
-            padding: 0.7rem 1.4rem;
-            box-shadow: 0 10px 22px rgba(163, 126, 59, 0.24);
-            white-space: nowrap;
-        }}
-
-        :is(.profile-pill-label, .section-kicker, .panel-eyebrow, .legend-title,
-            .color-field-label, .score-label, .welcome-kicker, .brand-kicker) {{
-            color: var(--sm-gold-text) !important;
-        }}
-
-        /* Main-area secondary buttons: outlined ivory, so the gold primary CTA stands out. */
-        [data-testid="stMain"] .stButton > button[kind="secondary"] {{
-            background: #fffaf3;
-            color: var(--sm-ink);
-            border: 1px solid rgba(159, 125, 66, 0.45);
-            box-shadow: none;
-        }}
-
-        [data-testid="stMain"] .stButton > button[kind="secondary"]:hover {{
-            background: #fff4e1;
-            border-color: var(--sm-gold-deep);
-            box-shadow: 0 8px 16px rgba(38, 31, 26, 0.08);
-        }}
-
-        /* Streamlit 1.6x selectbox: the visible field is a div[role="group"]. */
-        [data-testid="stSelectbox"] [role="group"] {{
-            border-radius: 16px !important;
-            border: 1px solid rgba(200, 169, 106, 0.22) !important;
-            background: rgba(255, 255, 255, 0.92) !important;
-            min-height: 3rem;
-            transition: border-color 180ms var(--sm-ease), box-shadow 180ms var(--sm-ease);
-        }}
-
-        [data-testid="stSelectbox"] [role="group"]:hover {{
-            border-color: rgba(159, 125, 66, 0.55) !important;
-        }}
-
-        [data-testid="stSelectbox"] [role="group"]:focus-within {{
-            border-color: var(--sm-gold-deep) !important;
-            box-shadow: 0 0 0 3px rgba(200, 169, 106, 0.22);
-        }}
-
-        [data-testid="stSidebar"] [data-testid="stSelectbox"] [role="group"] {{
-            background: rgba(255, 250, 243, 0.07) !important;
-            border-color: rgba(228, 205, 167, 0.18) !important;
-        }}
-
-        [data-testid="stSidebar"] [data-testid="stSelectbox"] [role="group"] * {{
-            color: #fff7ec !important;
-        }}
-
-        [data-testid="stSpinner"] {{
-            padding: 0.65rem 0.9rem;
-            border-radius: 14px;
-            background: #f7eddd;
-            color: var(--sm-ink);
-        }}
-
-        .stButton > button {{
-            transition: transform 180ms var(--sm-ease), box-shadow 180ms var(--sm-ease),
-                filter 180ms var(--sm-ease), background-color 180ms var(--sm-ease);
-        }}
-
-        .stButton > button:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 14px 26px rgba(163, 126, 59, 0.30);
-            filter: saturate(1.08) brightness(1.02);
-            color: #241b13;
-        }}
-
-        .stButton > button:active {{
-            transform: translateY(0) scale(0.97);
-            box-shadow: 0 4px 10px rgba(163, 126, 59, 0.22);
-            transition-duration: 80ms;
-        }}
-
-        .stButton > button:focus-visible {{
-            outline: 2px solid var(--sm-gold-deep);
-            outline-offset: 3px;
-        }}
-
-        /* Sidebar: unselected choices are quiet ghosts, the selected one is gold. */
-        [data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
-            background: rgba(255, 250, 243, 0.06);
-            border: 1px solid rgba(228, 205, 167, 0.18);
-            color: #f4eadb;
-            box-shadow: none;
-        }}
-
-        [data-testid="stSidebar"] .stButton > button[kind="secondary"]:hover {{
-            background: rgba(255, 250, 243, 0.12);
-            border-color: rgba(228, 205, 167, 0.42);
-            color: #fff8eb;
-            box-shadow: none;
-        }}
-
-        [data-testid="stSidebar"] .stButton > button[kind="primary"] {{
-            background: linear-gradient(135deg, #f0d59d 0%, #c7a05b 100%);
-            color: #241b13;
-            border: none;
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
-        }}
-
-        div[data-baseweb="select"] > div,
-        .stTextArea textarea {{
-            border-radius: 16px !important;
-            border: 1px solid rgba(200, 169, 106, 0.18) !important;
-            background: rgba(255, 255, 255, 0.88) !important;
-            min-height: 3rem;
-        }}
-
-        .legend-title {{
-            color: var(--sm-gold-deep);
-            font-size: 0.76rem;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 0.7rem;
-        }}
-
-        .legend-row {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.55rem;
-            margin-bottom: 0.2rem;
-        }}
-
-        .legend-chip {{
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.58rem 0.95rem;
-            border-radius: 999px;
-            border: 1px solid rgba(200, 169, 106, 0.18);
-            background: rgba(255, 255, 255, 0.88);
-            box-shadow: 0 10px 22px rgba(38, 31, 26, 0.04);
-            font-size: 0.92rem;
-            color: var(--sm-ink);
-            text-transform: capitalize;
-        }}
-
-        .legend-chip-muted {{
-            border-style: dashed;
-            color: var(--sm-muted);
-            background: rgba(248, 242, 234, 0.86);
-        }}
-
-        .legend-dot {{
-            width: 10px;
-            height: 10px;
-            border-radius: 999px;
-            background: linear-gradient(135deg, #e5c98f, #c09a56);
-        }}
-
-        .color-field-label {{
-            color: var(--sm-gold-deep);
-            font-size: 0.76rem;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 0.38rem;
-        }}
-
-        .current-color-chip {{
-            display: inline-flex;
-            align-items: center;
-            gap: 0.55rem;
-            padding: 0.58rem 0.9rem;
-            border-radius: 999px;
-            background: rgba(255, 250, 243, 0.88);
-            border: 1px solid rgba(200, 169, 106, 0.18);
-            margin-bottom: 0.55rem;
-            color: var(--sm-ink);
-            font-weight: 600;
-        }}
-
-        .current-color-dot {{
-            width: 12px;
-            height: 12px;
-            border-radius: 999px;
-            border: 1px solid rgba(38, 31, 26, 0.14);
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
-        }}
-
-        .score-shell {{
-            border-radius: 26px;
-            padding: 1.05rem 1.1rem 1rem;
-            background: linear-gradient(180deg, rgba(255, 250, 243, 0.94), rgba(247, 238, 224, 0.86));
-            border: 1px solid rgba(200, 169, 106, 0.18);
-            margin: 0.55rem 0 1rem;
-        }}
-
-        .score-label {{
-            color: var(--sm-gold-deep);
-            font-size: 0.76rem;
-            letter-spacing: 0.16em;
-            text-transform: uppercase;
-            font-weight: 700;
-            margin-bottom: 0.55rem;
-        }}
-
-        .score-topline {{
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            gap: 1rem;
-            margin-bottom: 0.7rem;
-        }}
-
-        .score-value {{
-            font-variant-numeric: tabular-nums;
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: 2.2rem;
-            line-height: 1;
-            color: var(--sm-ink);
-        }}
-
-        .score-note {{
-            color: var(--sm-muted);
-            font-weight: 600;
-        }}
-
-        .score-rail {{
-            width: 100%;
-            height: 10px;
-            border-radius: 999px;
-            background: rgba(152, 122, 74, 0.12);
-            overflow: hidden;
-        }}
-
-        .score-fill {{
-            height: 100%;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #efd8a7 0%, #c7a05b 100%);
-            transform-origin: left center;
-            animation: sm-fill 900ms 120ms var(--sm-ease) both;
-        }}
-
-        .score-shell[data-tier="low"] .score-fill {{
-            background: linear-gradient(90deg, #e9c3a8 0%, #b9764f 100%);
-        }}
-
-        .score-shell[data-tier="top"] .score-fill {{
-            background: linear-gradient(90deg, #f3dfae 0%, #c7a05b 70%, #9f7d42 100%);
-        }}
-
-        .score-note {{
-            display: inline-flex;
-            align-items: center;
-            border-radius: 999px;
-            padding: 0.3rem 0.7rem;
-            background: rgba(200, 169, 106, 0.14);
-            color: var(--sm-gold-deep) !important;
-            font-size: 0.82rem;
-            letter-spacing: 0.02em;
-            animation: sm-pop 420ms 520ms var(--sm-ease) both;
-        }}
-
-        .score-shell[data-tier="low"] .score-note {{
-            background: rgba(185, 118, 79, 0.14);
-            color: #8a4f2e !important;
-        }}
-
-        .legend-chip {{
-            transition: transform 180ms var(--sm-ease), box-shadow 180ms var(--sm-ease);
-        }}
-
-        .legend-chip:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 12px 22px rgba(38, 31, 26, 0.08);
-        }}
-
-        .current-color-dot,
-        .legend-dot {{
-            transition: background-color 320ms var(--sm-ease);
-        }}
-
-        [data-testid="stImage"] img {{
-            animation: sm-panel-in 420ms var(--sm-ease) both;
-        }}
-
-        [data-testid="stExpander"] details {{
-            border-radius: 22px !important;
-            border: 1px solid rgba(200, 169, 106, 0.18) !important;
-            background: var(--sm-surface);
-            transition: box-shadow 220ms var(--sm-ease), border-color 220ms var(--sm-ease);
-        }}
-
-        [data-testid="stExpander"] details:hover {{
-            border-color: rgba(200, 169, 106, 0.36) !important;
-            box-shadow: 0 14px 28px rgba(38, 31, 26, 0.07);
-        }}
-
-        .note-chip {{
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-            border-radius: 999px;
-            padding: 0.5rem 0.85rem;
-            background: rgba(255, 248, 236, 0.86);
-            border: 1px solid rgba(200, 169, 106, 0.15);
-            color: var(--sm-muted);
-            font-size: 0.9rem;
-        }}
-
-        .avatar-caption {{
-            color: var(--sm-muted);
-            text-align: center;
-            margin-top: 0.5rem;
-            font-size: 0.92rem;
-        }}
-
-        @media (max-width: 600px) {{
-            .profile-band {{ gap: 0.5rem; }}
-            .profile-pill {{ flex: 1 1 8rem; min-width: 0; }}
-            .profile-pill-value {{ white-space: normal; overflow-wrap: anywhere; }}
-            .score-topline {{ flex-wrap: wrap; gap: 0.35rem 0.75rem; }}
-        }}
-
-        @media (hover: none) {{
-            [class*="st-key-sm-card-"]:hover,
-            .stButton > button:hover {{ transform: none; }}
-        }}
-
-        @media (max-width: 900px) {{
-            .block-container {{
-                padding-left: 1rem;
-                padding-right: 1rem;
-            }}
-
-            .sidebar-swatch-grid {{
-                grid-template-columns: 1fr;
-            }}
-
-            .brand-shell {{
-                padding: 1.2rem 1.15rem 1.05rem;
-                border-radius: 24px;
-            }}
-
-            .brand-logo {{
-                width: min(72px, 22vw);
-                margin-bottom: 0.65rem;
-            }}
-
-            .brand-title {{
-                font-size: clamp(1.85rem, 8vw, 2.4rem);
-            }}
-
-            .brand-subtitle {{
-                font-size: 0.92rem;
-            }}
-        }}
-        </style>
-        """,
+        f'<section class="sm-hero{enter_class}">'
+        f'<div class="sm-hero-mark">{logo}<span class="sm-wordmark">StyleMatch</span></div>'
+        '<h1 class="sm-hero-title">Your palette</h1>'
+        f'<p class="sm-hero-lede">{profile_sentence}</p>'
+        f'<div class="sm-swatches" style="--n:{max(len(palette), 1)}" aria-label="Recommended colours">{swatches}</div>'
+        f"{status_html}</section>",
         unsafe_allow_html=True,
     )
 
@@ -1028,19 +163,40 @@ def render_sidebar_brand(logo_path: str | Path | None, title: str, subtitle: str
     )
 
 
-def render_section_intro(eyebrow: str, title: str, copy: str) -> None:
+def render_look_strip(
+    index: int,
+    score: int,
+    harmony: str,
+    pieces: list[tuple[str, str, str]],
+    reasons: list[str],
+) -> None:
+    """A generated look as garment swatches (same visual language as the hero palette)."""
+    cloth = "".join(
+        f'<div class="sm-look-piece"><div class="sm-look-cloth" style="--c:{escape(hex_value)}"></div>'
+        f'<div class="sm-look-garment">{escape(garment)}</div>'
+        f'<div class="sm-look-colour">{escape(humanize_value(color))}</div></div>'
+        for garment, color, hex_value in pieces
+    )
+    reason_items = "".join(f"<li>{escape(reason)}</li>" for reason in reasons if reason)
     st.markdown(
-        f'<div class="section-kicker">{escape(eyebrow)}</div>'
-        f'<div class="section-title">{escape(title)}</div>'
-        f'<div class="section-copy">{escape(copy)}</div>',
+        f'<div class="sm-look"><div class="sm-look-head"><h3 class="panel-title">Look {index}</h3>'
+        f'<div class="sm-look-score"><span>{int(score)}</span>/100</div></div>'
+        f'<div class="sm-look-harmony">{escape(harmony)} harmony</div>'
+        f'<div class="sm-look-strip" style="--n:{len(pieces)}">{cloth}</div>'
+        f'<ul class="sm-look-reasons">{reason_items}</ul></div>',
         unsafe_allow_html=True,
     )
 
 
+def render_section_intro(eyebrow: str, title: str, copy: str) -> None:
+    copy_html = f'<div class="section-copy">{escape(copy)}</div>' if copy else ""
+    st.markdown(f'<h2 class="section-title">{escape(title)}</h2>{copy_html}', unsafe_allow_html=True)
+
+
 def render_panel_heading(eyebrow: str, title: str, copy: str) -> None:
     st.markdown(
-        f'<div class="panel-heading"><div class="panel-eyebrow">{escape(eyebrow)}</div>'
-        f'<div class="panel-title">{escape(title)}</div><p class="panel-copy">{escape(copy)}</p></div>',
+        f'<div class="panel-heading"><h3 class="panel-title">{escape(title)}</h3>'
+        f'<p class="panel-copy">{escape(copy)}</p></div>',
         unsafe_allow_html=True,
     )
 
@@ -1088,7 +244,11 @@ def render_skin_tone_picker(options: list[str], session_key: str) -> str:
             f'<span class="sidebar-swatch-label">{escape(SKIN_TONE_LABELS[option])}</span>'
             "</div></div>"
         )
-    st.markdown(f'<div class="sidebar-swatch-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    tone_rules = "".join(
+        f'.st-key-{session_key}_{option}_{i // 2} button {{ --tone: {SKIN_TONE_SWATCHES[option]}; }}'
+        for i, option in enumerate(options)
+    )
+    st.markdown(f"<style>{tone_rules}</style>", unsafe_allow_html=True)
 
     current = st.session_state.get(session_key, options[0])
     rows = [options[i:i + 2] for i in range(0, len(options), 2)]
@@ -1137,8 +297,7 @@ def render_color_select(label: str, options: list[str], selected: str, key: str,
         del st.session_state[key]
     color_hex = color_map.get(selected, "#808080")
     st.markdown(
-        f'<div class="color-field-label">{escape(label)}</div>'
-        f'<div class="current-color-chip"><span class="current-color-dot" style="background:{escape(color_hex)};"></span>{escape(humanize_value(selected))}</div>',
+        f'<div class="color-field-label"><span class="current-color-dot" style="background:{escape(color_hex)};"></span>{escape(label)}</div>',
         unsafe_allow_html=True,
     )
     return st.selectbox(
