@@ -1,0 +1,353 @@
+{
+  "notes": "Skin value and undertone alone cannot establish personal contrast, chroma, or a season. These ranges and catalog palettes are app heuristics, not season diagnoses. Face contrast measures garment-to-skin value; outfit contrast measures garment-to-garment value.",
+  "skin_value_default": 58,
+  "mapping": [
+    {
+      "min_value": 85,
+      "warm": "light spring",
+      "cool": "light summer",
+      "neutral": "light summer"
+    },
+    {
+      "min_value": 75,
+      "warm": "true spring",
+      "cool": "true summer",
+      "neutral": "light spring"
+    },
+    {
+      "min_value": 65,
+      "warm": "bright spring",
+      "cool": "true winter",
+      "neutral": "soft summer"
+    },
+    {
+      "min_value": 50,
+      "warm": "soft autumn",
+      "cool": "soft summer",
+      "neutral": "soft summer"
+    },
+    {
+      "min_value": 40,
+      "warm": "true autumn",
+      "cool": "bright winter",
+      "neutral": "soft autumn"
+    },
+    {
+      "min_value": 0,
+      "warm": "deep autumn",
+      "cool": "deep winter",
+      "neutral": "deep winter"
+    }
+  ],
+  "palettes": {
+    "light spring": {
+      "face_value": [
+        15,
+        25
+      ],
+      "outfit_value": [
+        15,
+        30
+      ],
+      "chroma": [
+        25,
+        55
+      ],
+      "best": [
+        "cream",
+        "beige",
+        "camel",
+        "green"
+      ],
+      "avoid": [
+        "black",
+        "burgundy",
+        "charcoal"
+      ]
+    },
+    "true spring": {
+      "face_value": [
+        20,
+        40
+      ],
+      "outfit_value": [
+        20,
+        40
+      ],
+      "chroma": [
+        45,
+        78
+      ],
+      "best": [
+        "cream",
+        "camel",
+        "green",
+        "red",
+        "mustard"
+      ],
+      "avoid": [
+        "charcoal",
+        "burgundy",
+        "icy blue"
+      ]
+    },
+    "bright spring": {
+      "face_value": [
+        28,
+        55
+      ],
+      "outfit_value": [
+        35,
+        65
+      ],
+      "chroma": [
+        60,
+        92
+      ],
+      "best": [
+        "cream",
+        "green",
+        "blue",
+        "red",
+        "cobalt"
+      ],
+      "avoid": [
+        "taupe",
+        "olive",
+        "gray"
+      ]
+    },
+    "light summer": {
+      "face_value": [
+        8,
+        23
+      ],
+      "outfit_value": [
+        12,
+        30
+      ],
+      "chroma": [
+        10,
+        38
+      ],
+      "best": [
+        "icy blue",
+        "soft pink",
+        "gray",
+        "white"
+      ],
+      "avoid": [
+        "black",
+        "rust",
+        "mustard"
+      ]
+    },
+    "true summer": {
+      "face_value": [
+        15,
+        34
+      ],
+      "outfit_value": [
+        18,
+        38
+      ],
+      "chroma": [
+        12,
+        43
+      ],
+      "best": [
+        "soft pink",
+        "icy blue",
+        "gray",
+        "navy"
+      ],
+      "avoid": [
+        "red",
+        "rust",
+        "mustard"
+      ]
+    },
+    "soft summer": {
+      "face_value": [
+        8,
+        24
+      ],
+      "outfit_value": [
+        12,
+        32
+      ],
+      "chroma": [
+        0,
+        35
+      ],
+      "best": [
+        "taupe",
+        "gray",
+        "soft pink",
+        "icy blue"
+      ],
+      "avoid": [
+        "red",
+        "cobalt",
+        "mustard"
+      ]
+    },
+    "soft autumn": {
+      "face_value": [
+        10,
+        29
+      ],
+      "outfit_value": [
+        16,
+        36
+      ],
+      "chroma": [
+        10,
+        43
+      ],
+      "best": [
+        "taupe",
+        "beige",
+        "camel",
+        "olive",
+        "brown"
+      ],
+      "avoid": [
+        "white",
+        "cobalt",
+        "icy blue"
+      ]
+    },
+    "true autumn": {
+      "face_value": [
+        17,
+        37
+      ],
+      "outfit_value": [
+        20,
+        42
+      ],
+      "chroma": [
+        30,
+        62
+      ],
+      "best": [
+        "olive",
+        "camel",
+        "brown",
+        "rust",
+        "mustard"
+      ],
+      "avoid": [
+        "icy blue",
+        "white",
+        "cobalt"
+      ]
+    },
+    "deep autumn": {
+      "face_value": [
+        15,
+        34
+      ],
+      "outfit_value": [
+        20,
+        42
+      ],
+      "chroma": [
+        24,
+        58
+      ],
+      "best": [
+        "brown",
+        "olive",
+        "forest green",
+        "rust",
+        "camel",
+        "burgundy"
+      ],
+      "avoid": [
+        "icy blue",
+        "white",
+        "soft pink"
+      ]
+    },
+    "deep winter": {
+      "face_value": [
+        24,
+        48
+      ],
+      "outfit_value": [
+        33,
+        60
+      ],
+      "chroma": [
+        40,
+        78
+      ],
+      "best": [
+        "black",
+        "navy",
+        "burgundy",
+        "deep green",
+        "cobalt"
+      ],
+      "avoid": [
+        "beige",
+        "camel",
+        "mustard"
+      ]
+    },
+    "true winter": {
+      "face_value": [
+        32,
+        56
+      ],
+      "outfit_value": [
+        35,
+        65
+      ],
+      "chroma": [
+        45,
+        84
+      ],
+      "best": [
+        "navy",
+        "cobalt",
+        "white",
+        "black",
+        "burgundy"
+      ],
+      "avoid": [
+        "camel",
+        "rust",
+        "mustard"
+      ]
+    },
+    "bright winter": {
+      "face_value": [
+        37,
+        62
+      ],
+      "outfit_value": [
+        45,
+        72
+      ],
+      "chroma": [
+        60,
+        95
+      ],
+      "best": [
+        "white",
+        "black",
+        "cobalt",
+        "blue",
+        "red"
+      ],
+      "avoid": [
+        "taupe",
+        "beige",
+        "olive"
+      ]
+    }
+  }
+}

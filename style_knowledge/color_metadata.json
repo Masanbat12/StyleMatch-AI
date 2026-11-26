@@ -3,132 +3,154 @@
     "hex": "#FFFFFF",
     "family": "neutral",
     "brightness": 100,
-    "temperature": "neutral"
+    "temperature": "neutral",
+    "chroma": 0
   },
   "black": {
     "hex": "#1A1A1A",
     "family": "neutral",
     "brightness": 5,
-    "temperature": "neutral"
+    "temperature": "neutral",
+    "chroma": 0
   },
   "gray": {
     "hex": "#808080",
     "family": "neutral",
     "brightness": 50,
-    "temperature": "neutral"
+    "temperature": "neutral",
+    "chroma": 0
   },
   "charcoal": {
     "hex": "#36454F",
     "family": "neutral",
     "brightness": 22,
-    "temperature": "cool"
+    "temperature": "cool",
+    "chroma": 12
   },
   "beige": {
     "hex": "#F5F5DC",
     "family": "neutral",
     "brightness": 85,
-    "temperature": "warm"
+    "temperature": "warm",
+    "chroma": 15
   },
   "cream": {
     "hex": "#FFFDD0",
     "family": "neutral",
     "brightness": 92,
-    "temperature": "warm"
+    "temperature": "warm",
+    "chroma": 25
   },
   "taupe": {
     "hex": "#8B8589",
     "family": "neutral",
     "brightness": 60,
-    "temperature": "neutral"
+    "temperature": "neutral",
+    "chroma": 8
   },
   "camel": {
     "hex": "#C19A6B",
     "family": "brown",
     "brightness": 68,
-    "temperature": "warm"
+    "temperature": "warm",
+    "chroma": 40
   },
   "brown": {
     "hex": "#8B4513",
     "family": "brown",
     "brightness": 35,
-    "temperature": "warm"
+    "temperature": "warm",
+    "chroma": 50
   },
   "blue": {
     "hex": "#3498DB",
     "family": "blue",
     "brightness": 60,
-    "temperature": "cool"
+    "temperature": "cool",
+    "chroma": 80
   },
   "navy": {
     "hex": "#000080",
     "family": "blue",
     "brightness": 18,
-    "temperature": "cool"
+    "temperature": "cool",
+    "chroma": 30
   },
   "cobalt": {
     "hex": "#0047AB",
     "family": "blue",
     "brightness": 28,
-    "temperature": "cool"
+    "temperature": "cool",
+    "chroma": 85
   },
   "icy blue": {
     "hex": "#AFDBF5",
     "family": "blue",
     "brightness": 88,
-    "temperature": "cool"
+    "temperature": "cool",
+    "chroma": 30
   },
   "green": {
     "hex": "#27AE60",
     "family": "green",
     "brightness": 48,
-    "temperature": "neutral"
+    "temperature": "neutral",
+    "chroma": 80
   },
   "olive": {
     "hex": "#556B2F",
     "family": "green",
     "brightness": 36,
-    "temperature": "warm"
+    "temperature": "warm",
+    "chroma": 38
   },
   "forest green": {
     "hex": "#228B22",
     "family": "green",
     "brightness": 34,
-    "temperature": "neutral"
+    "temperature": "neutral",
+    "chroma": 55
   },
   "deep green": {
     "hex": "#056608",
     "family": "green",
     "brightness": 22,
-    "temperature": "cool"
+    "temperature": "cool",
+    "chroma": 55
   },
   "burgundy": {
     "hex": "#800020",
     "family": "red",
     "brightness": 18,
-    "temperature": "cool"
+    "temperature": "cool",
+    "chroma": 46
   },
   "rust": {
     "hex": "#B7410E",
     "family": "orange",
     "brightness": 34,
-    "temperature": "warm"
+    "temperature": "warm",
+    "chroma": 74
   },
   "mustard": {
     "hex": "#E1AD01",
     "family": "yellow",
     "brightness": 60,
-    "temperature": "warm"
+    "temperature": "warm",
+    "chroma": 88
   },
   "soft pink": {
     "hex": "#FFB6C1",
     "family": "pink",
     "brightness": 84,
-    "temperature": "cool"
+    "temperature": "cool",
+    "chroma": 32
   },
   "red": {
     "hex": "#E74C3C",
     "family": "red",
     "brightness": 45,
-    "temperature": "warm"
+    "temperature": "warm",
+    "chroma": 90
   }
 }

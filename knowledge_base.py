@@ -18,12 +18,27 @@ SOURCES = [
     {
         "title": "The Concept Wardrobe - What is Color Analysis",
         "url": "https://theconceptwardrobe.com/colour-analysis-comprehensive-guides/what-is-color-analysis",
-        "summary": "Warm colors have yellow undertones while cool colors have blue undertones.",
+        "summary": "The twelve-season model combines temperature, value, and chroma to characterize palettes.",
     },
     {
         "title": "The Concept Wardrobe - Which Season Are You?",
         "url": "https://theconceptwardrobe.com/colour-analysis-comprehensive-guides/seasonal-color-analysis-which-color-season-are-you",
         "summary": "Skin undertones can be broadly grouped into warm, cool, and neutral for color analysis.",
+    },
+    {
+        "title": "Adobe — Complementary Colours",
+        "url": "https://www.adobe.com/uk/creativecloud/design/discover/complementary-colors.html",
+        "summary": "Explains color harmonies and the 60/30/10 dominant, secondary, and accent color proportions.",
+    },
+    {
+        "title": "Emily Post Institute — Business Casual Attire",
+        "url": "https://emilypost.com/advice/business-casual-attire-guide",
+        "summary": "Describes business casual clothing and the role of understated footwear.",
+    },
+    {
+        "title": "Emily Post Institute — Attire Guide",
+        "url": "https://emilypost.com/advice/attire-guide-dress-codes-from-casual-to-white-tie",
+        "summary": "Describes casual, dressy casual, and semi-formal attire, including dark evening suits and dress shoes.",
     },
     {
         "title": "OpenCV Colorspaces Tutorial",
@@ -46,6 +61,8 @@ STYLE_RULES = _load_json("style_rules.json")
 OCCASION_RULES = _load_json("occasion_rules.json")
 COLOR_METADATA = _load_json("color_metadata.json")
 EXPLANATION_TEMPLATES = _load_json("explanation_templates.json")
+SCORING_RULES = _load_json("scoring_rules.json")
+SEASONAL_PALETTES = _load_json("seasonal_palettes.json")
 
 # Legacy compatibility for modules that still expect the older shape.
 GROUNDED_RULES = {

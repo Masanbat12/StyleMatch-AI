@@ -1,0 +1,176 @@
+{
+  "notes": "Point budgets, thresholds and color lists are app calibrations. Chroma is perceived color intensity on a catalog-relative scale. Dress codes use color as a proxy for formality. The 60/30/10 shares approximate visual emphasis by slot.",
+  "labels": {
+    "0": "Needs refining",
+    "55": "Balanced option",
+    "70": "Strong harmony",
+    "85": "Editorial match"
+  },
+  "preference_rank_weights": {
+    "shirt": 2.5,
+    "pants": 1,
+    "shoes": 1
+  },
+  "rules": {
+    "face_value": {
+      "name": "Face-to-garment value contrast",
+      "max": 16,
+      "dress_max": 20,
+      "tolerance": 55
+    },
+    "outfit_value": {
+      "name": "Top-to-bottom value contrast",
+      "max": 9,
+      "tolerance": 45
+    },
+    "chroma": {
+      "name": "Chroma fit",
+      "max": 14,
+      "dress_max": 17,
+      "tolerance": 100,
+      "secondary_weight": 0.25
+    },
+    "temperature": {
+      "name": "Undertone temperature",
+      "max": 14,
+      "secondary_weight": 0.25,
+      "fit": {
+        "warm": {
+          "warm": 1,
+          "neutral": 0.85,
+          "cool": 0.35
+        },
+        "cool": {
+          "warm": 0.35,
+          "neutral": 0.85,
+          "cool": 1
+        },
+        "neutral": {
+          "warm": 0.8,
+          "neutral": 1,
+          "cool": 0.8
+        }
+      }
+    },
+    "seasonal_palette": {
+      "name": "Seasonal palette",
+      "max": 15,
+      "dress_max": 17,
+      "secondary_weight": 0.2,
+      "fit": {
+        "best": 1,
+        "other": 0.5,
+        "avoid": 0.1
+      }
+    },
+    "harmony": {
+      "name": "Color harmony",
+      "max": 10,
+      "fit": {
+        "monochromatic": 0.9,
+        "analogous": 1,
+        "complementary": 0.85,
+        "neutral-anchored": 1,
+        "mixed": 0.45
+      },
+      "analogous_angle": 65,
+      "complementary_angle": 35,
+      "hues": {
+        "pink": 335,
+        "red": 0,
+        "orange": 30,
+        "brown": 30,
+        "yellow": 60,
+        "green": 120,
+        "blue": 220
+      }
+    },
+    "proportion": {
+      "name": "Color emphasis",
+      "max": 7,
+      "shares": {
+        "top": 0.6,
+        "bottom": 0.3,
+        "shoes": 0.1
+      },
+      "dress_shares": {
+        "top": 0.9,
+        "shoes": 0.1
+      },
+      "max_accent_share": 0.15,
+      "chroma_lead": 15,
+      "fit": {
+        "balanced": 1,
+        "dominant_shoes": 0.25,
+        "competing_garments": 0.5
+      },
+      "competition_chroma": 70
+    },
+    "dress_code": {
+      "name": "Occasion color fit",
+      "max": 10,
+      "fit": {
+        "preferred": 1,
+        "acceptable": 0.7,
+        "poor": 0.15
+      },
+      "codes": {
+        "daily": {
+          "base_value": 100,
+          "garment_chroma": 100,
+          "shoe_chroma": 70,
+          "anchor_required": false
+        },
+        "work": {
+          "base_value": 85,
+          "garment_chroma": 55,
+          "shoe_chroma": 30,
+          "anchor_required": true
+        },
+        "date": {
+          "base_value": 85,
+          "garment_chroma": 75,
+          "shoe_chroma": 55,
+          "anchor_required": false
+        },
+        "evening": {
+          "base_value": 40,
+          "garment_chroma": 55,
+          "shoe_chroma": 35,
+          "anchor_required": true
+        }
+      }
+    },
+    "footwear": {
+      "name": "Footwear coordination",
+      "max": 5,
+      "statement_styles": [
+        "street"
+      ],
+      "anchor_colors": [
+        "black",
+        "white",
+        "gray",
+        "charcoal",
+        "beige",
+        "cream",
+        "taupe",
+        "brown",
+        "camel",
+        "navy"
+      ],
+      "dark_anchors": [
+        "navy",
+        "deep green",
+        "forest green",
+        "burgundy"
+      ],
+      "fit": {
+        "anchored": 1,
+        "statement": 0.9,
+        "unanchored": 0.55,
+        "loud": 0.15
+      }
+    }
+  }
+}
