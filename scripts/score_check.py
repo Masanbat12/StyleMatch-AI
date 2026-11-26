@@ -9,7 +9,13 @@ sys.path[:0] = [str(ROOT), str(ROOT / "tests")]
 
 from catalog import ALL_COLORS
 from recommendation_engine import generate_outfit_suggestions, score_breakdown
-from test_scoring_calibration import GOLDEN_OUTFITS, SUGGESTION_PROFILES, calibration_failures
+from test_scoring_calibration import (
+    COLOR_SLOTS,
+    GOLDEN_OUTFITS,
+    RANKING_PROFILES,
+    SUGGESTION_PROFILES,
+    calibration_failures,
+)
 
 
 def main():
@@ -26,6 +32,11 @@ def main():
     for suggestion_profile in SUGGESTION_PROFILES:
         top_five = [look["score"] for look in generate_outfit_suggestions(*suggestion_profile)]
         print(f"{'/'.join(suggestion_profile)}: {top_five}")
+
+    for ranking_profile in RANKING_PROFILES:
+        looks = generate_outfit_suggestions(*ranking_profile, limit=3)
+        summaries = ["/".join(look[slot] for slot in COLOR_SLOTS) + f" ({look['score']})" for look in looks]
+        print(f"Top 3 {'/'.join(ranking_profile)}: {', '.join(summaries)}")
 
 
 if __name__ == "__main__":

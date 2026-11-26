@@ -32,4 +32,13 @@
 {"profile":["light","warm","elegant","evening"],"outfit":["cobalt","red","mustard"],"dress":false,"band":[35,68],"why":"three vivid hues compete without an evening anchor"},
 {"profile":["medium","cool","minimal","work"],"outfit":["red","mustard","cobalt"],"dress":false,"band":[35,68],"why":"competing saturated hues exceed work formality"},
 {"profile":["tan","neutral","casual","daily"],"outfit":["green","mustard","red"],"dress":false,"band":[39,74],"why":"three vivid hues compete for dominance"},
-{"profile":["dark","cool","elegant","evening"],"outfit":["mustard","cream","red"],"dress":false,"band":[42,73],"why":"light base and bold footwear weaken evening formality"}]
+{"profile":["dark","cool","elegant","evening"],"outfit":["mustard","cream","red"],"dress":false,"band":[42,73],"why":"light base and bold footwear weaken evening formality"},
+{"profile":["medium","neutral","casual","daily"],"outfit":["soft pink","gray","white"],"dress":false,"band":[88,98],"why":"one soft accent with a relaxed neutral base"},
+{"profile":["medium","neutral","elegant","work"],"outfit":["burgundy","camel","brown"],"dress":false,"band":[78,93],"why":"a rich accent over a business-casual camel base"},
+{"profile":["medium","neutral","street","date"],"outfit":["cobalt","gray","black"],"dress":false,"band":[75,92],"why":"one saturated accent near the face with a neutral base"},
+{"profile":["medium","neutral","street","date"],"outfit":["cobalt","red","black"],"dress":false,"band":[48,68],"why":"two vivid garments compete for attention"},
+{"profile":["medium","neutral","minimal","work"],"outfit":["taupe","gray","black"],"dress":false,"band":[87,98],"why":"tonal neutrals with understated shoes"},
+{"profile":["medium","neutral","minimal","work"],"outfit":["cobalt","gray","white"],"dress":false,"band":[60,76],"why":"a vivid accent and white shoes weaken the minimal work palette"},
+{"profile":["medium","neutral","elegant","evening"],"outfit":["burgundy","navy","black"],"dress":false,"band":[78,95],"why":"deep colors and black shoes suit evening"},
+{"profile":["medium","neutral","elegant","evening"],"outfit":["white","beige","white"],"dress":false,"band":[65,82],"why":"a light base and white shoes weaken evening fit"},
+{"profile":["medium","neutral","casual","date"],"outfit":["soft pink","gray","brown"],"dress":false,"band":[87,98],"why":"a flattering soft accent near the face and a neutral base"}]

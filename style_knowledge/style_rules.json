@@ -1,5 +1,9 @@
 {
   "casual": {
+    "scoring": {
+      "base_value": [32, 88], "max_garment_chroma": 55, "max_vivid": 1,
+      "weights": {"base_value": 2, "muted_garments": 1, "max_vivid": 1, "shoes": 1}
+    },
     "preferred_colors": ["white", "blue", "olive", "gray", "beige"],
     "preferred_shoes": ["white", "beige", "gray"],
     "fit_notes": [
@@ -8,6 +12,10 @@
     ]
   },
   "elegant": {
+    "scoring": {
+      "bases": ["navy", "charcoal", "black", "burgundy", "camel"], "max_garment_chroma": 55,
+      "contrast": [18, 82], "weights": {"base": 3, "muted_garments": 3, "contrast": 1, "shoes": 1}
+    },
     "preferred_colors": ["black", "burgundy", "navy", "camel", "charcoal"],
     "preferred_shoes": ["black", "brown", "beige"],
     "fit_notes": [
@@ -16,7 +24,11 @@
     ]
   },
   "street": {
-    "preferred_colors": ["red", "cobalt", "black", "forest green", "charcoal"],
+    "scoring": {
+      "bases": ["black", "white", "gray", "navy"], "minimum_fit": 0, "suggestion_vivid_count": 1,
+      "weights": {"single_vivid": 14, "street_base": 4, "shoes": 4}
+    },
+    "preferred_colors": ["cobalt", "blue", "red", "green", "black", "gray", "navy"],
     "preferred_shoes": ["white", "black"],
     "fit_notes": [
       "Streetwear can support stronger contrast and bolder color accents.",
@@ -24,6 +36,10 @@
     ]
   },
   "minimal": {
+    "scoring": {
+      "contrast": [0, 34], "max_vivid": 0,
+      "weights": {"neutral_palette": 4, "max_vivid": 2, "contrast": 3, "shoes": 1}
+    },
     "preferred_colors": ["white", "black", "gray", "taupe", "beige"],
     "preferred_shoes": ["white", "black", "beige"],
     "fit_notes": [

@@ -1,5 +1,8 @@
 {
   "daily": {
+    "scoring": {
+      "weights": {"wearable_palette": 1}
+    },
     "preferred_colors": ["white", "blue", "gray", "olive", "beige"],
     "preferred_shoes": ["white", "beige", "gray"],
     "notes": [
@@ -8,6 +11,10 @@
     ]
   },
   "date": {
+    "scoring": {
+      "face_contrast": [22, 52], "contrast": [10, 52], "accent_chroma": 25,
+      "weights": {"face_accent": 2, "face_contrast": 1, "contrast": 2, "shoes": 1}
+    },
     "preferred_colors": ["burgundy", "black", "navy", "deep green", "camel"],
     "preferred_shoes": ["black", "brown", "white"],
     "notes": [
@@ -16,7 +23,12 @@
     ]
   },
   "work": {
-    "preferred_colors": ["navy", "gray", "white", "charcoal", "beige"],
+    "scoring": {
+      "bases": ["navy", "charcoal", "gray", "white", "beige", "camel"],
+      "max_garment_chroma": 45, "max_vivid": 0,
+      "weights": {"base": 2, "soft_accent": 3, "max_vivid": 2, "shoes": 3}
+    },
+    "preferred_colors": ["navy", "gray", "white", "charcoal", "beige", "camel"],
     "preferred_shoes": ["black", "brown", "beige"],
     "notes": [
       "Work outfits benefit from stable, low-risk color combinations.",
@@ -24,6 +36,10 @@
     ]
   },
   "evening": {
+    "scoring": {
+      "base_value": [0, 40], "top_value": [0, 55], "max_garment_chroma": 55,
+      "weights": {"base_value": 3, "top_value": 2, "muted_garments": 2, "shoes": 3}
+    },
     "preferred_colors": ["black", "burgundy", "deep green", "charcoal", "navy"],
     "preferred_shoes": ["black", "brown"],
     "notes": [

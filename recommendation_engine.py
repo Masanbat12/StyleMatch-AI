@@ -157,6 +157,77 @@ def _harmony(top: str, bottom: str) -> str:
     return "mixed"
 
 
+def _profile_color_fit(
+    profile: dict[str, Any],
+    rule: dict[str, Any],
+    top: str,
+    base: str,
+    shoes: str,
+    dress: bool,
+    skin_value: int,
+    top_status: str,
+) -> tuple[float, str]:
+    config = profile["scoring"]
+    neutrals = SCORING_RULES["rules"]["footwear"]["anchor_colors"]
+    threshold = SCORING_RULES["rules"]["proportion"]["competition_chroma"]
+    garments = (top,) if dress else (top, base)
+    colors = (*garments, shoes)
+    vivid = [color for color in colors if _color_chroma(color) >= threshold]
+    bases = config.get("bases", [])
+    accents = [color for color in garments if color not in bases]
+    top_value, base_value = map(_color_brightness, (top, base))
+    top_name = _humanize(top)
+    base_item = f"{_humanize(base)} {'dress' if dress else 'bottom'}"
+    shoe_item = f"{_humanize(shoes)} shoes"
+    pair = f"{top_name} and {_humanize(shoes if dress else base).lower()}"
+    contrast = abs(top_value - _color_brightness(shoes if dress else base))
+    tolerance = rule["value_tolerance"]
+
+    def band_fit(key: str, value: int) -> float:
+        return _range_fit(value, config.get(key, [0, 100]), tolerance)[0]
+
+    checks = {
+        "base": (base in bases, f"{base_item} color for the profile"),
+        "base_value": (band_fit("base_value", base_value), f"{base_item} lightness"),
+        "top_value": (band_fit("top_value", top_value), f"{top_name} garment lightness"),
+        "contrast": (band_fit("contrast", contrast), f"{pair} contrast"),
+        "face_contrast": (band_fit("face_contrast", abs(skin_value - top_value)), f"{top_name} contrast against the face"),
+        "muted_garments": (
+            max(map(_color_chroma, garments)) <= config.get("max_garment_chroma", 100),
+            f"{pair} garment intensity",
+        ),
+        "max_vivid": (len(vivid) <= config.get("max_vivid", len(colors)), f"{pair} palette intensity"),
+        "shoes": (shoes in profile["preferred_shoes"], f"{shoe_item} for the profile"),
+        "single_vivid": (len(vivid) == 1, f"{pair} palette with one saturated accent"),
+        "street_base": (
+            all(color in bases for color in garments if color not in vivid),
+            f"{pair} streetwear base",
+        ),
+        "neutral_palette": (all(color in neutrals for color in colors), f"{pair} neutral palette"),
+        "soft_accent": (
+            len(accents) <= 1 and all(_color_chroma(color) <= config.get("max_garment_chroma", 100)
+                                      for color in accents),
+            f"{pair} palette with at most one soft accent",
+        ),
+        "face_accent": (
+            top not in neutrals and top_status != "avoid"
+            and _color_chroma(top) >= config.get("accent_chroma", 0)
+            and (dress or base in neutrals),
+            f"{top_name} as the accent near the face",
+        ),
+        "wearable_palette": (
+            rule.get("daily_saturation_fit", 1) if len(vivid) == len(colors) else 1,
+            f"{pair} saturation for daily wear",
+        ),
+    }
+    weights = config["weights"]
+    fit = sum(checks[key][0] * weight for key, weight in weights.items()) / sum(weights.values())
+    focus = max(weights, key=lambda key: weights[key] * (1 - checks[key][0]))
+    reason = f"Good fit: {checks[focus][1]}." if fit == 1 else f"Less suited: {checks[focus][1]}."
+    floor = config.get("minimum_fit", rule["minimum_fit"])
+    return floor + (1 - floor) * fit, reason
+
+
 def score_report(
     skin_tone: str,
     undertone: str,
@@ -176,12 +247,6 @@ def score_report(
     garment = "dress" if dress else "top"
     main = f"{_humanize(top)} {garment}"
     bottom = f"{_humanize(base)} bottom"
-    shoe = f"{_humanize(shoes)} shoes"
-    base_item = main if dress else bottom
-    pair = f"{main} and {(shoe if dress else bottom).lower()}"
-    footwear = rules["footwear"]
-    neutrals = footwear["anchor_colors"]
-    neutral_pair = top in neutrals and (shoes if dress else base) in neutrals
     top_value, base_value = _color_brightness(top), _color_brightness(base)
     top_chroma, base_chroma, shoes_chroma = map(_color_chroma, (top, base, shoes))
     components = []
@@ -258,14 +323,6 @@ def score_report(
         reason = f"{main} sits outside the core {palette_name} palette."
     add("seasonal_palette", fit, reason)
 
-    proportion = rules["proportion"]
-    saturated = proportion["competition_chroma"]
-    items = [(top, main), (shoes, shoe)] if dress else [(top, main), (base, bottom), (shoes, shoe)]
-    vivid = [(color, item) for color, item in items if color not in neutrals and _color_chroma(color) >= saturated]
-    unanchored_brights = len(vivid) >= 2 and all(color not in neutrals for color, _ in items)
-    saturated_monochrome = len(vivid) == len(items) and len({_color_family(color) for color, _ in vivid}) == 1
-    vivid_items = ", ".join(item.lower() for _, item in vivid).capitalize()
-
     harmony = _harmony(top, shoes if dress else base)
     proportion = rules["proportion"]
     vivid_threshold = proportion["competition_chroma"]
@@ -318,25 +375,16 @@ def score_report(
         reason = f"{shoe_name} shoes add a small statement accent."
     add("proportion", proportion["fit"][proportion_result], reason)
 
-    dress_code = rules["dress_code"]
-    code = dress_code["codes"].get(occasion, dress_code["codes"]["daily"])
-    anchor = base in neutral_colors or base in footwear["dark_anchors"]
-    base_slot = "dress" if dress else "bottom"
-    if unanchored_brights:
-        level, reason = code["unanchored_brights"], f"The vivid {top} and {shoes} palette lacks a neutral for {occasion}."
-    elif base_value > code["base_value"]:
-        level, reason = "poor", f"{base_name} {base_slot} is too light for {occasion}."
-    elif code["anchor_required"] and not anchor:
-        level, reason = "poor", f"{base_name} {base_slot} does not anchor the {occasion} palette."
-    elif not neutral_shoes and shoes_chroma > code["shoe_chroma"]:
-        level, reason = "acceptable", f"{shoe_name} shoes are bold for {occasion}."
-    elif max(top_chroma, base_chroma) > code["garment_chroma"]:
-        vivid_garment = f"{top_name} {garment.lower()}" if top_chroma >= base_chroma else f"{base_name} bottom"
-        level, reason = "acceptable", f"{vivid_garment} is bold for {occasion}."
-    else:
-        level, reason = "preferred", f"{base_name} {base_slot} fits the {occasion} color guidelines."
-    add("dress_code", dress_code["fit"][level], reason)
+    for rule_id, profile in (
+        ("style_fit", STYLE_RULES.get(style, STYLE_RULES["casual"])),
+        ("dress_code", OCCASION_RULES.get(occasion, OCCASION_RULES["daily"])),
+    ):
+        fit, reason = _profile_color_fit(
+            profile, rules[rule_id], top, base, shoes, dress, skin_value, top_status
+        )
+        add(rule_id, fit, reason)
 
+    base_slot = "dress" if dress else "bottom"
     if shoes == base or neutral_shoes:
         level, reason = "anchored", f"{shoe_name} shoes anchor the {base} {base_slot}."
     elif loud and not statement:
@@ -442,13 +490,19 @@ def generate_outfit_suggestions(
     profile = _preferred_profile(undertone, style, occasion)
     recommended = get_recommended_colors(undertone, style, occasion, user_context=user_context)
     _, _, palette = _season_profile(skin_tone, undertone)
-    top_candidates = [color for color in dict.fromkeys(recommended[:10] + palette["best"])
-                      if color in ALL_COLORS]
+    style_colors = profile["style"].get("preferred_colors", [])
+    style_scoring = profile["style"].get("scoring", {})
+    style_bases = style_scoring.get("bases", [])
+    top_candidates = [
+        color for color in dict.fromkeys(recommended[:10] + palette["best"] + style_colors + style_bases)
+        if color in ALL_COLORS
+    ]
     pant_candidates = [
         color
         for color in dict.fromkeys(
             profile["undertone"].get("recommended_neutrals", [])
-            + profile["style"].get("preferred_colors", [])
+            + style_colors
+            + style_bases
             + profile["occasion"].get("preferred_colors", [])
             + ["black", "navy", "gray", "beige", "charcoal", "brown", "taupe"]
         )
@@ -465,7 +519,17 @@ def generate_outfit_suggestions(
     ]
 
     candidates: list[dict[str, Any]] = []
+    vivid_count = style_scoring.get("suggestion_vivid_count")
+    threshold = SCORING_RULES["rules"]["proportion"]["competition_chroma"]
+    if vivid_count is not None:
+        shoe_candidates = profile["style"]["preferred_shoes"]
     for shirt_color, pants_color, shoes_color in product(top_candidates, pant_candidates, shoe_candidates):
+        if vivid_count is not None:
+            garments = (shirt_color, pants_color)
+            if sum(_color_chroma(color) >= threshold for color in garments) != vivid_count:
+                continue
+            if any(_color_chroma(color) < threshold and color not in style_scoring["bases"] for color in garments):
+                continue
         score, reasons = score_breakdown(
             skin_tone=skin_tone,
             undertone=undertone,
