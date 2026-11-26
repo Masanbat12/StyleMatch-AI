@@ -1,80 +1,56 @@
-# CODEX_TASK — Calibrate scoring v2 against expert-labelled outfits
+# CODEX_TASK — Make style and occasion change the ranking
 
-Read `AGENTS.md` first (especially the collaboration protocol). Finish by writing `CODEX_REPORT.md`.
+Read `AGENTS.md` first (collaboration protocol). Finish by overwriting `CODEX_REPORT.md`.
 
 ## Goal
-Scoring v2 is formally correct but miscalibrated against real styling. Example: for
-`medium / neutral / casual / daily`, white shirt + navy pants + brown shoes, a textbook classic,
-scores 68 ("Needs refining") because the footwear and emphasis rules call brown shoes
-"dominant" and the top/bottom value-contrast rule calls white/navy "too high". Calibrate the
-rules so the score agrees with professional judgment, and make every reason concrete.
+Calibration works (golden set 35/35), but style and occasion barely affect results. For skin tone
+`medium` and undertone `neutral`, `generate_outfit_suggestions(limit=3)` returns the **identical**
+top 3 for `casual/daily` and `elegant/work` (gray-gray-beige 96, soft pink-gray-black 96,
+icy blue-gray-brown 95). Style has no scoring component, and `dress_code` is only 10 of 100 points.
+Make style and occasion matter, so a stylist would agree with each profile's top looks.
 
 ## Relevant files
-- `tests/golden_outfits.json` — NEW: expert-labelled calibration set (see below).
-- `tests/test_scoring_calibration.py` — NEW: asserts the golden set.
-- `scripts/score_check.py` — NEW: prints a compact calibration summary (see Verification).
-- `style_knowledge/scoring_rules.json`, `style_knowledge/seasonal_palettes.json`,
-  `style_knowledge/color_metadata.json` — tune here first (prefer data over code).
-- `recommendation_engine.py` — only where a rule cannot be expressed as data.
-- `tests/test_recommendation_engine.py` — update only if an existing assertion encodes the
-  miscalibration; say which in `Decisions`.
+- `style_knowledge/style_rules.json`, `style_knowledge/occasion_rules.json`,
+  `style_knowledge/scoring_rules.json`: encode the rules as data first.
+- `recommendation_engine.py`: add a style-fit component and strengthen occasion fit.
+- `tests/golden_outfits.json`, `tests/test_scoring_calibration.py`, `scripts/score_check.py`.
 
-## Golden set
-`tests/golden_outfits.json` = list of
-`{"profile": [skin_tone, undertone, style, occasion], "outfit": [top, bottom, shoes], "dress": false, "band": [min, max], "why": "one line"}`.
-Include these anchors exactly, then add at least 22 more of your own (at least 30 total),
-covering every skin tone group (fair, medium, dark), all 3 undertones, all 4 occasions, and
-3 or more dress cases. Every `why` must name the professional principle.
+## What to encode
+- **Style fit (new component, `rule_id` in JSON):**
+  - casual: relaxed, mid-value neutrals and soft colours; one colour accent welcome.
+  - elegant: dark or deep bases (navy, charcoal, black, burgundy, camel), low chroma, refined contrast.
+  - street: one bold saturated accent over black, white, gray or denim-blue; white or black shoes.
+  - minimal: two or three neutrals, tonal or monochrome, no saturated accent.
+- **Occasion fit (stronger):**
+  - work: business-casual base of navy, charcoal, gray, white, beige or camel; at most one soft accent; leather-neutral shoes.
+  - date: one flattering colour near the face; balanced contrast.
+  - evening: dark base, deeper colours, black or brown shoes.
+  - daily: anything wearable; light penalty for head-to-toe saturated colour.
+- Keep the total spread healthy: the new component must not push scores back toward 100.
 
-| profile | outfit (top, bottom, shoes) | band | why |
-|---|---|---|---|
-| medium, neutral, casual, daily | white, navy, brown | 80–92 | classic neutral base; brown leather is a neutral shoe |
-| medium, neutral, elegant, work | white, charcoal, black | 82–95 | business-casual staple |
-| tan, warm, casual, daily | cream, olive, camel | 82–95 | warm analogous neutrals for warm undertone |
-| fair, cool, elegant, evening | navy, charcoal, black | 80–93 | dark, low-chroma evening base for cool colouring |
-| dark, warm, elegant, date | rust, cream, brown | 82–95 | warm earth palette with good contrast for deep skin |
-| fair, cool, casual, daily | icy blue, gray, white | 78–92 | soft cool palette suits light cool colouring |
-| medium, warm, elegant, evening | mustard, red, cobalt | 35–60 | three loud brights, wrong formality for evening |
-| fair, cool, elegant, work | mustard, rust, red | 30–55 | warm saturated colours against cool fair colouring; too loud for work |
-| dark, cool, minimal, work | soft pink, mustard, green | 35–60 | clashing hues, no neutral anchor, off-code for minimal work |
-| medium, neutral, casual, daily | red, red, red | 30–55 | head-to-toe saturated red reads costume-like for daily |
-| light, warm, elegant, evening | black, black, black (dress) | 72–88 | all-black evening dress is formal and safe |
-| tan, warm, casual, date | olive, cream, white (dress) | 74–90 | warm muted dress with clean neutral shoes |
-
-## Calibration principles (encode as data where possible)
-- Neutral leather shoe colours (black, brown, camel, taupe, white, beige, gray, navy, charcoal)
-  are neutrals for footwear and emphasis. They must never count as "dominant" or "most saturated".
-- Value contrast is judged against a band chosen by occasion and style (evening/elegant/work
-  tolerate higher top/bottom contrast; casual/daily tolerates high contrast with a neutral base).
-  White over navy or charcoal is in band for every occasion.
-- Monochrome neutrals are fine; monochrome saturated colours are penalised.
-- More than one saturated hue without a neutral anchor is penalised; evening and work penalise it more.
-- Reasons are concrete and name the garment and colour, e.g. "White top is much lighter than
-  medium skin: crisp, high-contrast focus", not "above the estimated range". One fact each,
-  at most 110 characters.
+## Done when
+- For skin tone `medium` and undertone `neutral`, the top-3 sets differ meaningfully between
+  `casual/daily`, `elegant/work`, `street/date`, `minimal/work` and `elegant/evening`: at most one look
+  shared between any two profiles. Assert this in a test.
+- Every top-3 look for `elegant/work` has a bottom in {navy, charcoal, gray, black, beige, camel}
+  and no saturated accent; every top-3 look for `street/*` has exactly one saturated colour.
+- Golden set still at least 90% in band, and all 12 original anchors still in band. Add at least
+  8 new style- or occasion-focused cases.
+- Distribution for `medium/neutral/casual/daily`: at most 0.5% at 100 and at most 10% at or above 90.
+  Top looks at or above 85 for the four profiles in `score_check.py`.
+- `scripts/score_check.py` additionally prints the top-3 looks for the five profiles above, one
+  line each, and stays ASCII-only (the Windows console is cp1255).
+- All tests pass.
 
 ## Constraints
-- Keep all public signatures and return shapes, including `score_report()`, and keep
-  `score_breakdown` / `score_dress` totals equal to `score_report()["score"]`.
+- Keep every public signature and return shape, including `score_report()` and total equality.
 - Deterministic; no network; no new dependencies.
-- Do NOT edit `app.py`, `ui_components.py`, `style_assistant.py`, `llm_client.py`, `AGENTS.md`,
-  `CODEX_TASK.md`, `.gitignore`, or anything under `.streamlit/`.
-- Do not commit. Delete the scratch folders `.pytest-stylematch-*` that your last run left in the
-  project root (they have sandbox-only permissions).
+- Do NOT edit `app.py`, `ui_components.py`, `assets/`, `style_assistant.py`, `llm_client.py`,
+  `AGENTS.md`, `CODEX_TASK.md`, `.gitignore`, or `.streamlit/`.
+- Do not commit. Skip the `.pytest-stylematch-*` folders (they are git-ignored, and nobody has permission to delete them).
 
 ## Verification commands
 ```
 .venv-run/Scripts/python.exe -m pytest -q -p no:cacheprovider
 .venv-run/Scripts/python.exe scripts/score_check.py
 ```
-`scripts/score_check.py` prints at most 12 lines:
-- golden set: `passed X/N`, followed by one line per failure (`profile | outfit | got S, band [a,b]`);
-- distribution for `medium/neutral/casual/daily` over all colour triples: min, max, % at 100, % ≥ 90;
-- top-5 generated scores for the four profiles used in the tests.
-
-## Done when
-- Golden set: at least 90% of cases in band, and every one of the 12 anchors above in band.
-- Distribution for `medium/neutral/casual/daily`: at most 0.5% at 100 and at most 10% ≥ 90.
-- Top generated looks still score ≥ 85 for those four profiles.
-- No reason string contains "estimated range"; all reasons are ≤ 110 characters.
-- All tests pass and `CODEX_REPORT.md` follows the protocol.
