@@ -1,0 +1,34 @@
+{
+  "daily": {
+    "preferred_colors": ["white", "blue", "gray", "olive", "beige"],
+    "preferred_shoes": ["white", "beige", "gray"],
+    "notes": [
+      "Daily outfits should be easy to wear and visually balanced.",
+      "Safe neutrals improve repeat use."
+    ]
+  },
+  "date": {
+    "preferred_colors": ["burgundy", "black", "navy", "deep green", "camel"],
+    "preferred_shoes": ["black", "brown", "white"],
+    "notes": [
+      "Date looks should feel intentional but not overdone.",
+      "One richer tone often helps the outfit feel more elevated."
+    ]
+  },
+  "work": {
+    "preferred_colors": ["navy", "gray", "white", "charcoal", "beige"],
+    "preferred_shoes": ["black", "brown", "beige"],
+    "notes": [
+      "Work outfits benefit from stable, low-risk color combinations.",
+      "Clean contrast is usually stronger than bold accent color."
+    ]
+  },
+  "evening": {
+    "preferred_colors": ["black", "burgundy", "deep green", "charcoal", "navy"],
+    "preferred_shoes": ["black", "brown"],
+    "notes": [
+      "Evening looks can support deeper tones and stronger contrast.",
+      "Dark anchors usually make the outfit feel more polished."
+    ]
+  }
+}

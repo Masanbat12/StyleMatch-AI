@@ -1,0 +1,32 @@
+{
+  "warm": {
+    "best_colors": ["olive", "beige", "cream", "camel", "brown", "forest green", "rust", "mustard"],
+    "secondary_colors": ["burgundy", "taupe", "deep green"],
+    "avoid_colors": ["icy blue", "cobalt"],
+    "recommended_neutrals": ["cream", "beige", "camel", "brown"],
+    "notes": [
+      "Warm undertones generally work well with earthy and golden-based colors.",
+      "Muted warm palettes usually look more natural than icy palettes."
+    ]
+  },
+  "cool": {
+    "best_colors": ["navy", "charcoal", "white", "burgundy", "cobalt", "gray", "icy blue", "deep green"],
+    "secondary_colors": ["soft pink", "taupe", "black"],
+    "avoid_colors": ["mustard", "rust"],
+    "recommended_neutrals": ["white", "gray", "charcoal", "black"],
+    "notes": [
+      "Cool undertones usually work best with blue-based or crisp shades.",
+      "High contrast combinations often look strong on cool undertones."
+    ]
+  },
+  "neutral": {
+    "best_colors": ["taupe", "white", "black", "blue", "green", "soft pink", "gray", "beige"],
+    "secondary_colors": ["olive", "navy", "burgundy", "camel"],
+    "avoid_colors": [],
+    "recommended_neutrals": ["white", "gray", "taupe", "beige", "black"],
+    "notes": [
+      "Neutral undertones can usually balance both warm and cool palettes.",
+      "Mid-saturation colors tend to look especially stable and versatile."
+    ]
+  }
+}

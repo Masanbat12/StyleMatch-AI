@@ -1,0 +1,23 @@
+{
+  "shirt_reasons": [
+    "{shirt} works well because it supports your {undertone} undertone.",
+    "{shirt} helps create a balanced top layer for a {style} look.",
+    "{shirt} is a strong choice because it matches the tone direction of the outfit."
+  ],
+  "pants_reasons": [
+    "{pants} gives the outfit a stable foundation.",
+    "{pants} helps balance the top without adding visual noise.",
+    "{pants} works as a grounding color for this combination."
+  ],
+  "shoes_reasons": [
+    "{shoes} keeps the outfit versatile and wearable.",
+    "{shoes} supports the palette without competing with the main colors.",
+    "{shoes} helps finish the look cleanly."
+  ],
+  "full_outfit_reasons": [
+    "This look works because {shirt} and {pants} create a balanced contrast for {occasion}.",
+    "This combination suits a {style} direction and stays aligned with your {undertone} undertone.",
+    "The palette feels cohesive because the colors support each other without overpowering the outfit.",
+    "This outfit works well for {occasion} because it stays polished, wearable, and visually balanced."
+  ]
+}

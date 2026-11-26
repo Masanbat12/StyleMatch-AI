@@ -1,0 +1,30 @@
+{
+  "harmonies": {
+    "analogous": {
+      "olive": ["green", "beige", "camel"],
+      "blue": ["navy", "cobalt", "icy blue"],
+      "burgundy": ["rust", "brown", "soft pink"],
+      "green": ["olive", "deep green", "beige"]
+    },
+    "complementary": {
+      "blue": ["camel", "rust"],
+      "navy": ["beige", "camel"],
+      "olive": ["soft pink", "cream"],
+      "burgundy": ["beige", "cream"],
+      "green": ["soft pink", "taupe"]
+    },
+    "monochromatic": {
+      "blue": ["navy", "cobalt", "icy blue"],
+      "green": ["olive", "deep green", "forest green"],
+      "neutral": ["white", "gray", "charcoal", "black", "taupe"]
+    }
+  },
+  "safe_neutrals": ["white", "black", "gray", "charcoal", "beige", "taupe", "cream"],
+  "universal_pairs": [
+    ["white", "navy"],
+    ["beige", "olive"],
+    ["gray", "burgundy"],
+    ["black", "camel"],
+    ["white", "charcoal"]
+  ]
+}
