@@ -16,12 +16,38 @@
       "name": "Face-to-garment value contrast",
       "max": 16,
       "dress_max": 20,
+      "occasion_tolerance": {"evening": 80},
       "tolerance": 55
     },
     "outfit_value": {
       "name": "Top-to-bottom value contrast",
       "max": 9,
-      "tolerance": 45
+      "tolerance": 45,
+      "occasion_bands": {
+        "daily": [
+          12,
+          45
+        ],
+        "date": [
+          10,
+          58
+        ],
+        "work": [
+          8,
+          82
+        ],
+        "evening": [
+          5,
+          85
+        ]
+      },
+      "style_maximums": {
+        "elegant": 85
+      },
+      "neutral_pair_band": [
+        0,
+        82
+      ]
     },
     "chroma": {
       "name": "Chroma fit",
@@ -56,9 +82,11 @@
       "name": "Seasonal palette",
       "max": 15,
       "dress_max": 17,
+      "season_fit": {"light summer": {"best": 0.65}},
+      "dress_fit": {"best": 0.55},
       "secondary_weight": 0.2,
       "fit": {
-        "best": 1,
+        "best": 0.9,
         "other": 0.5,
         "avoid": 0.1
       }
@@ -71,7 +99,10 @@
         "analogous": 1,
         "complementary": 0.85,
         "neutral-anchored": 1,
-        "mixed": 0.45
+        "mixed": 0.45,
+        "monochromatic_neutral": 1,
+        "monochromatic_saturated": 0,
+        "unanchored_brights": 0
       },
       "analogous_angle": 65,
       "complementary_angle": 35,
@@ -102,7 +133,8 @@
       "fit": {
         "balanced": 1,
         "dominant_shoes": 0.25,
-        "competing_garments": 0.5
+        "competing_garments": 0.5,
+        "unanchored_brights": 0
       },
       "competition_chroma": 70
     },
@@ -119,25 +151,29 @@
           "base_value": 100,
           "garment_chroma": 100,
           "shoe_chroma": 70,
-          "anchor_required": false
+          "anchor_required": false,
+          "unanchored_brights": "acceptable"
         },
         "work": {
-          "base_value": 85,
+          "base_value": 100,
           "garment_chroma": 55,
           "shoe_chroma": 30,
-          "anchor_required": true
+          "anchor_required": true,
+          "unanchored_brights": "poor"
         },
         "date": {
           "base_value": 85,
           "garment_chroma": 75,
           "shoe_chroma": 55,
-          "anchor_required": false
+          "anchor_required": false,
+          "unanchored_brights": "acceptable"
         },
         "evening": {
           "base_value": 40,
           "garment_chroma": 55,
           "shoe_chroma": 35,
-          "anchor_required": true
+          "anchor_required": true,
+          "unanchored_brights": "poor"
         }
       }
     },

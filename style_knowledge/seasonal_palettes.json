@@ -45,10 +45,6 @@
         15,
         25
       ],
-      "outfit_value": [
-        15,
-        30
-      ],
       "chroma": [
         25,
         55
@@ -67,10 +63,6 @@
     },
     "true spring": {
       "face_value": [
-        20,
-        40
-      ],
-      "outfit_value": [
         20,
         40
       ],
@@ -96,10 +88,6 @@
         28,
         55
       ],
-      "outfit_value": [
-        35,
-        65
-      ],
       "chroma": [
         60,
         92
@@ -119,11 +107,7 @@
     },
     "light summer": {
       "face_value": [
-        8,
-        23
-      ],
-      "outfit_value": [
-        12,
+        25,
         30
       ],
       "chroma": [
@@ -147,10 +131,6 @@
         15,
         34
       ],
-      "outfit_value": [
-        18,
-        38
-      ],
       "chroma": [
         12,
         43
@@ -169,12 +149,8 @@
     },
     "soft summer": {
       "face_value": [
-        8,
+        16,
         24
-      ],
-      "outfit_value": [
-        12,
-        32
       ],
       "chroma": [
         0,
@@ -196,10 +172,6 @@
       "face_value": [
         10,
         29
-      ],
-      "outfit_value": [
-        16,
-        36
       ],
       "chroma": [
         10,
@@ -223,10 +195,6 @@
         17,
         37
       ],
-      "outfit_value": [
-        20,
-        42
-      ],
       "chroma": [
         30,
         62
@@ -249,10 +217,6 @@
         15,
         34
       ],
-      "outfit_value": [
-        20,
-        42
-      ],
       "chroma": [
         24,
         58
@@ -274,11 +238,7 @@
     "deep winter": {
       "face_value": [
         24,
-        48
-      ],
-      "outfit_value": [
-        33,
-        60
+        56
       ],
       "chroma": [
         40,
@@ -302,10 +262,6 @@
         32,
         56
       ],
-      "outfit_value": [
-        35,
-        65
-      ],
       "chroma": [
         45,
         84
@@ -327,10 +283,6 @@
       "face_value": [
         37,
         62
-      ],
-      "outfit_value": [
-        45,
-        72
       ],
       "chroma": [
         60,

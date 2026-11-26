@@ -173,7 +173,15 @@ def score_report(
     top = shirt_color
     base = top if dress else pants_color
     shoes = shoes_color
-    garment = "Dress" if dress else "Top"
+    garment = "dress" if dress else "top"
+    main = f"{_humanize(top)} {garment}"
+    bottom = f"{_humanize(base)} bottom"
+    shoe = f"{_humanize(shoes)} shoes"
+    base_item = main if dress else bottom
+    pair = f"{main} and {(shoe if dress else bottom).lower()}"
+    footwear = rules["footwear"]
+    neutrals = footwear["anchor_colors"]
+    neutral_pair = top in neutrals and (shoes if dress else base) in neutrals
     top_value, base_value = _color_brightness(top), _color_brightness(base)
     top_chroma, base_chroma, shoes_chroma = map(_color_chroma, (top, base, shoes))
     components = []
@@ -184,22 +192,39 @@ def score_report(
         components.append(dict(id=rule_id, name=rule["name"], points=round(fit * maximum, 2),
                                max=maximum, reason=reason))
 
-    fit, position = _range_fit(abs(skin_value - top_value), palette["face_value"],
-                               rules["face_value"]["tolerance"])
-    add("face_value", fit, f"{garment}-to-skin contrast is {position} the estimated range.")
+    top_name, base_name, shoe_name = map(str.title, (top, base, shoes))
+    footwear = rules["footwear"]
+    neutral_colors = footwear["anchor_colors"]
+    face_contrast = abs(skin_value - top_value)
+    face_rule = rules["face_value"]
+    tolerance = face_rule["occasion_tolerance"].get(occasion, face_rule["tolerance"])
+    fit, position = _range_fit(face_contrast, palette["face_value"], tolerance)
+    direction = "lighter" if top_value > skin_value else "darker"
+    relation = {"below": "close in lightness to", "within": f"{direction} than",
+                "above": f"much {direction} than"}[position]
+    add("face_value", fit, f"{top_name} {garment.lower()} is {relation} {skin_tone.replace('_', ' ')} skin.")
+
     if not dress:
-        fit, position = _range_fit(abs(top_value - base_value), palette["outfit_value"],
-                                   rules["outfit_value"]["tolerance"])
-        add("outfit_value", fit, f"Top-to-bottom contrast is {position} the estimated range.")
+        value_rule = rules["outfit_value"]
+        bands = value_rule["occasion_bands"]
+        low, high = bands.get(occasion, bands["daily"])
+        high = max(high, value_rule["style_maximums"].get(style, high))
+        if top in neutral_colors and base in neutral_colors:
+            low, neutral_high = value_rule["neutral_pair_band"]
+            high = max(high, neutral_high)
+        fit, position = _range_fit(abs(top_value - base_value), [low, high], value_rule["tolerance"])
+        relation = {"below": "low", "within": "balanced", "above": "high"}[position]
+        add("outfit_value", fit, f"{top_name} top and {base_name} bottom create {relation} value contrast.")
 
     chroma = rules["chroma"]
     fit, position = _range_fit(top_chroma, palette["chroma"], chroma["tolerance"])
-    reason = f"{garment} saturation is {position} the estimated range."
+    chroma_text = {"below": "is softer than", "within": "matches", "above": "is more vivid than"}
+    reason = f"{top_name} {garment.lower()} {chroma_text[position]} the {season.title()} palette."
     if not dress:
         base_fit, base_position = _range_fit(base_chroma, palette["chroma"], chroma["tolerance"])
         weight = chroma["secondary_weight"]
         if (1 - base_fit) * weight > (1 - fit) * (1 - weight):
-            reason = f"Bottom saturation is {base_position} the estimated range."
+            reason = f"{base_name} bottom {chroma_text[base_position]} the {season.title()} palette."
         fit = fit * (1 - weight) + base_fit * weight
     add("chroma", fit, reason)
 
@@ -208,9 +233,9 @@ def score_report(
     top_temperature, base_temperature = map(_color_temperature, (top, base))
     weight = temperature["secondary_weight"] if not dress else 0
     fit = temperature_fit[top_temperature] * (1 - weight) + temperature_fit[base_temperature] * weight
-    reason = f"{garment} has a {top_temperature} color temperature."
+    reason = f"{main} has a {top_temperature} temperature against a {undertone} undertone."
     if temperature_fit[base_temperature] < temperature_fit[top_temperature] and weight:
-        reason = f"The {base_temperature} bottom shifts the outfit temperature away from your palette."
+        reason = f"{bottom} has a {base_temperature} temperature against a {undertone} undertone."
     add("temperature", fit, reason)
 
     seasonal = rules["seasonal_palette"]
@@ -218,75 +243,112 @@ def score_report(
     top_status = _palette_status(top, palette["best"], avoid)
     base_status = _palette_status(base, palette["best"], avoid)
     weight = seasonal["secondary_weight"] if not dress else 0
-    values = seasonal["fit"]
+    values = seasonal["fit"] | seasonal["season_fit"].get(season, {})
+    if dress:
+        values = values | seasonal["dress_fit"]
     fit = values[top_status] * (1 - weight) + values[base_status] * weight
     palette_name = season.title()
     if top_status == "avoid":
-        reason = f"{_humanize(top)} is less flattering for this palette."
+        reason = f"{main} is less flattering for {palette_name} coloring."
     elif base_status == "avoid":
-        reason = f"{_humanize(base)} is less flattering for this palette."
+        reason = f"{bottom} is less flattering for {palette_name} coloring."
     elif top_status == "best":
-        reason = f"{_humanize(top)} is a recommended {palette_name} color."
+        reason = f"{main} matches the core {palette_name} palette."
     else:
-        reason = f"{_humanize(top)} sits outside the core {palette_name} colors."
+        reason = f"{main} sits outside the core {palette_name} palette."
     add("seasonal_palette", fit, reason)
 
-    harmony = _harmony(top, shoes if dress else base)
-    harmony_reasons = {
-        "monochromatic": "The pair shares a color family.",
-        "analogous": "The hues sit near each other on the color wheel.",
-        "complementary": "The hues sit across the color wheel.",
-        "neutral-anchored": "A neutral color anchors the pairing.",
-        "mixed": "The hues form a mixed pairing.",
-    }
-    add("harmony", rules["harmony"]["fit"][harmony], harmony_reasons[harmony])
-
     proportion = rules["proportion"]
+    saturated = proportion["competition_chroma"]
+    items = [(top, main), (shoes, shoe)] if dress else [(top, main), (base, bottom), (shoes, shoe)]
+    vivid = [(color, item) for color, item in items if color not in neutrals and _color_chroma(color) >= saturated]
+    unanchored_brights = len(vivid) >= 2 and all(color not in neutrals for color, _ in items)
+    saturated_monochrome = len(vivid) == len(items) and len({_color_family(color) for color, _ in vivid}) == 1
+    vivid_items = ", ".join(item.lower() for _, item in vivid).capitalize()
+
+    harmony = _harmony(top, shoes if dress else base)
+    proportion = rules["proportion"]
+    vivid_threshold = proportion["competition_chroma"]
+    pair_color, pair_name = (shoes, shoe_name) if dress else (base, base_name)
+    pair_slot = "shoes" if dress else "bottom"
+    pairing = f"{top_name} {garment.lower()} and {pair_name} {pair_slot}"
+    harmony_reasons = {
+        "monochromatic": "share a color family",
+        "analogous": "are close on the color wheel",
+        "complementary": "sit across the color wheel",
+        "neutral-anchored": "form a neutral-anchored pair",
+        "mixed": "mix hues from different color families",
+    }
+    harmony_key = harmony
+    harmony_reason = f"{pairing} {harmony_reasons[harmony]}."
+    if harmony == "monochromatic":
+        if top in neutral_colors and pair_color in neutral_colors:
+            harmony_key = "monochromatic_neutral"
+        elif min(top_chroma, _color_chroma(pair_color)) >= vivid_threshold:
+            harmony_key = "monochromatic_saturated"
+            harmony_reason = f"{pairing} repeat a saturated hue."
     shares = proportion["dress_shares"] if dress else proportion["shares"]
-    footwear = rules["footwear"]
     statement = style in footwear["statement_styles"]
-    loud = shoes_chroma >= max(top_chroma, base_chroma) + proportion["chroma_lead"]
-    proportion_result, reason = "balanced", "The main garment leads the palette."
-    if loud and not statement and shares["shoes"] <= proportion["max_accent_share"]:
-        proportion_result, reason = "dominant_shoes", "The shoes dominate the color emphasis."
+    neutral_shoes = shoes in neutral_colors
+    loud = not neutral_shoes and shoes_chroma >= max(top_chroma, base_chroma) + proportion["chroma_lead"]
+    colors = (top, shoes) if dress else (top, base, shoes)
+    vivid_hues = {_color_family(color) for color in colors
+                 if color not in neutral_colors and _color_chroma(color) >= vivid_threshold}
+    unanchored_brights = not any(color in neutral_colors for color in colors) and len(vivid_hues) > 1
+    if unanchored_brights:
+        harmony_key = "unanchored_brights"
+        harmony_reason = f"{pairing} contribute to a mix of unanchored vivid hues."
+    add("harmony", rules["harmony"]["fit"][harmony_key], harmony_reason)
+
+    proportion_result, reason = "balanced", f"{top_name} {garment.lower()} leads the palette."
+    if unanchored_brights:
+        proportion_result, reason = "unanchored_brights", f"{pairing} lack a neutral to balance the vivid palette."
+    elif loud and not statement and shares["shoes"] <= proportion["max_accent_share"]:
+        proportion_result, reason = "dominant_shoes", f"{shoe_name} shoes draw focus from the {top} {garment.lower()}."
+    elif harmony_key == "monochromatic_saturated" and shoes == top:
+        proportion_result, reason = "unanchored_brights", f"{top_name} spans every slot at full saturation."
     elif (
         not dress
-        and harmony in {"complementary", "mixed"}
-        and min(top_chroma, base_chroma) >= proportion["competition_chroma"]
+        and top not in neutral_colors and base not in neutral_colors
+        and min(top_chroma, base_chroma) >= vivid_threshold
         and min(shares["top"], shares["bottom"]) > proportion["max_accent_share"]
     ):
-        proportion_result, reason = "competing_garments", "Two large areas of vivid color compete."
+        proportion_result, reason = "competing_garments", f"{pairing} occupy large areas of vivid color."
     elif loud:
-        reason = "The shoes provide a small statement accent."
+        reason = f"{shoe_name} shoes add a small statement accent."
     add("proportion", proportion["fit"][proportion_result], reason)
 
     dress_code = rules["dress_code"]
     code = dress_code["codes"].get(occasion, dress_code["codes"]["daily"])
-    anchor = base in footwear["anchor_colors"] or base in footwear["dark_anchors"]
-    if base_value > code["base_value"]:
-        level, reason = "poor", f"The base color is too light for {occasion}."
+    anchor = base in neutral_colors or base in footwear["dark_anchors"]
+    base_slot = "dress" if dress else "bottom"
+    if unanchored_brights:
+        level, reason = code["unanchored_brights"], f"The vivid {top} and {shoes} palette lacks a neutral for {occasion}."
+    elif base_value > code["base_value"]:
+        level, reason = "poor", f"{base_name} {base_slot} is too light for {occasion}."
     elif code["anchor_required"] and not anchor:
-        level, reason = "poor", f"The base lacks an anchor color for {occasion}."
-    elif shoes_chroma > code["shoe_chroma"]:
-        level, reason = "acceptable", f"The shoe color is bold for {occasion}."
+        level, reason = "poor", f"{base_name} {base_slot} does not anchor the {occasion} palette."
+    elif not neutral_shoes and shoes_chroma > code["shoe_chroma"]:
+        level, reason = "acceptable", f"{shoe_name} shoes are bold for {occasion}."
     elif max(top_chroma, base_chroma) > code["garment_chroma"]:
-        level, reason = "acceptable", f"A garment color is vivid for {occasion}."
+        vivid_garment = f"{top_name} {garment.lower()}" if top_chroma >= base_chroma else f"{base_name} bottom"
+        level, reason = "acceptable", f"{vivid_garment} is bold for {occasion}."
     else:
-        level, reason = "preferred", f"The palette fits the {occasion} color guidelines."
+        level, reason = "preferred", f"{base_name} {base_slot} fits the {occasion} color guidelines."
     add("dress_code", dress_code["fit"][level], reason)
 
-    if loud and not statement:
-        level, reason = "loud", "The shoes are the most saturated item."
-    elif shoes == base or shoes in footwear["anchor_colors"]:
-        level, reason = "anchored", "The shoes anchor the base color."
+    if shoes == base or neutral_shoes:
+        level, reason = "anchored", f"{shoe_name} shoes anchor the {base} {base_slot}."
+    elif loud and not statement:
+        level, reason = "loud", f"{shoe_name} shoes are more vivid than the {top} {garment.lower()}."
     elif loud:
-        level, reason = "statement", "The shoes add a streetwear accent."
+        level, reason = "statement", f"{shoe_name} shoes add a streetwear accent."
     else:
-        level, reason = "unanchored", "The shoes introduce a separate accent color."
+        level, reason = "unanchored", f"{shoe_name} shoes introduce a separate accent color."
     add("footwear", footwear["fit"][level], reason)
 
     score = round(sum(component["points"] for component in components))
-    label = next(label for floor, label in SCORING_RULES["labels"].items() if score >= int(floor))
+    label = next(label for floor, label in sorted(SCORING_RULES["labels"].items(), key=lambda item: int(item[0]), reverse=True) if score >= int(floor))
     return {
         "score": score,
         "label": label,
