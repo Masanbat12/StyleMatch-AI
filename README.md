@@ -4,7 +4,12 @@ StyleMatch AI is a Streamlit app that suggests outfit colours for your complexio
 
 Live app: https://stylematch-ai-h9lu.onrender.com/
 
-Promo video (30 s, 1080p): [promo/stylematch_promo.mp4](promo/stylematch_promo.mp4)
+Promo video (30 s, 1080p):
+
+
+https://github.com/user-attachments/assets/c893ae7d-c3fb-47a1-8d92-d8373932cfc0
+
+
 
 ## What you can do in the app
 
