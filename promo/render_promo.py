@@ -404,6 +404,29 @@ def main():
         print("stills written")
         return
     out = OUT_DIR / "stylematch_promo.mp4"
+    music = OUT_DIR / "stylematch_music.wav"
+    try:
+        import subprocess
+        import imageio_ffmpeg
+    except ImportError:
+        imageio_ffmpeg = None
+    if imageio_ffmpeg is not None and music.exists():
+        # H.264 + AAC with the soundtrack: plays on phones, WhatsApp, Instagram and browsers.
+        cmd = [imageio_ffmpeg.get_ffmpeg_exe(), "-y", "-loglevel", "error",
+               "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-",
+               "-i", str(music), "-c:v", "libx264", "-preset", "slow", "-crf", "18",
+               "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest",
+               str(out)]
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+        for g in range(TOTAL):
+            proc.stdin.write(frame(g).tobytes())
+            if g % 150 == 0:
+                print(f"frame {g}/{TOTAL}", flush=True)
+        proc.stdin.close()
+        if proc.wait() != 0:
+            raise SystemExit("ffmpeg failed")
+        print(f"wrote {out.name} (H.264 + AAC)")
+        return
     writer = cv2.VideoWriter(str(out), cv2.VideoWriter_fourcc(*"mp4v"), FPS, (W, H))
     if not writer.isOpened():
         raise SystemExit("could not open video writer")
