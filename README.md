@@ -1,215 +1,151 @@
 # StyleMatch AI
 
-StyleMatch AI is a Streamlit application for tone-aware outfit exploration. It combines image-based complexion estimation, a structured local style knowledge base, layered avatar previews, and optional Supabase-backed user accounts in one polished interface.
+StyleMatch AI is a Streamlit app that suggests outfit colours for your complexion. Upload a portrait or pick your skin tone, and the app estimates your undertone, places you in one of 12 colour seasons, scores outfits out of 100, and shows each look on a layered avatar.
 
-## Current architecture
+Live app: https://stylematch-ai-h9lu.onrender.com/
 
-The active application flow is intentionally simple:
+Promo video (30 s, 1080p): [promo/stylematch_promo.mp4](promo/stylematch_promo.mp4)
 
-- the app always runs locally without requiring PostgreSQL
-- guest users can use the full product without creating an account
-- saved looks fall back to local SQLite storage automatically
-- if Supabase is configured, users can sign up, log in, and sync saved looks to the cloud
+## What you can do in the app
 
-## Main modules
+The sidebar holds your profile: skin tone, undertone, style (casual, elegant, street, minimal) and occasion (daily, date, work, evening). It also picks the avatar (man or woman) and the garments: shirt, hoodie, jacket or dress on top, pants or skirt below, sneakers or heels. Six tabs sit on the main page:
+
+- Image Analyzer reads a portrait, estimates skin tone and undertone, and warns you when the lighting or the skin sample is too poor to trust.
+- Outfit Builder lets you choose colours for each garment. The score and its reasons update as you change them, and the avatar preview follows.
+- Generate 5 Looks ranks five distinct outfits for your profile. You can open any of them in the Builder to adjust it.
+- AI Style Assistant answers questions in English or Hebrew. It only uses facts the engine produced, so it never makes up a score.
+- Saved Looks keeps the outfits you saved, with the avatar and profile they were made for.
+- Sources lists the colour-theory references behind the rules.
+
+Each look has Like and Not for me buttons. Reactions move the colours you like up the recommendation list and push the ones you reject down. They change the order of suggestions, and the score itself stays the same.
+
+## How the score works
+
+The engine in `recommendation_engine.py` reads its rules from `style_knowledge/scoring_rules.json` and splits 100 points across ten checks:
+
+| Check | Points (dress) |
+| --- | --- |
+| Value contrast between face and garment | 14 (17) |
+| Value contrast between top and bottom | 7 |
+| Chroma against your season | 12 (14) |
+| Undertone temperature | 12 |
+| Seasonal palette | 13 (15) |
+| Colour harmony | 8 |
+| Colour emphasis (60/30/10 split) | 5 |
+| Style fit | 12 |
+| Occasion fit | 12 |
+| Footwear | 5 |
+
+`score_report()` returns the total together with every component, its reason, and the rule IDs it used. The Builder, the generated looks and the assistant all read from that one report.
+
+A golden set of 44 hand-scored outfits in `tests/golden_outfits.json` keeps the scores honest. To check calibration:
+
+```bash
+python scripts/score_check.py
+```
+
+It prints how many golden cases fall in their expected band, the score spread across all colour combinations, and the top three looks for five sample profiles. At the moment all 44 cases pass, no outfit scores 100, and about 7% score 90 or more.
+
+## AI stylist
+
+`llm_client.py` speaks the OpenAI-compatible chat API, so one setting switches the provider. The default is a local Ollama model, which is free and needs no account:
+
+```bash
+ollama pull qwen2.5:3b
+```
+
+Groq, Gemini and OpenRouter work too, each with a free tier and an API key. Set the provider in `.streamlit/secrets.toml` (see `streamlit_secrets.example.toml`) or with `LLM_*` environment variables. When no model answers, the tab falls back to a rule-based answer built from the same facts.
+
+## Project layout
 
 ```text
-stylematch_ai_v2/
-├── app.py                    # Streamlit page flow and orchestration
-├── ui_components.py          # Theme, layout helpers, and branded UI blocks
-├── image_analysis.py         # Upload analysis, skin-tone estimation, confidence and warnings
-├── recommendation_engine.py  # Scoring, harmony logic, generated looks
-├── style_assistant.py        # Grounded style assistant output
-├── database.py               # Local SQLite persistence with optional Supabase sync
-├── supabase_client.py        # Supabase configuration and client helpers
-├── supabase_auth_service.py  # Supabase Auth sign-up / log-in flow
-├── supabase_profile_repository.py # Supabase profile storage and duplicate nickname checks
-├── session_manager.py        # Guest/auth session state
-├── avatar_renderer.py        # Layered avatar rendering
-├── catalog.py                # Shared tone, style, occasion, and color catalogs
-├── knowledge_base.py         # Loads local JSON knowledge files
-├── style_knowledge/          # Color theory, undertone, style, and occasion rules
-├── assets/                   # Branding assets
-├── avatar_assets/            # Base avatar and garment overlays
-└── tests/                    # Focused regression tests for active modules
+StyleMatch-AI/
+|-- app.py                         # Page flow: sidebar, six tabs, callbacks
+|-- ui_components.py               # Theme loader and branded HTML blocks
+|-- assets/theme.css               # Colour tokens, type, motion
+|-- image_analysis.py              # Portrait loading, skin sampling, quality checks
+|-- recommendation_engine.py       # score_report(), suggestions, personalised ranking
+|-- style_assistant.py             # Grounded prompts and the rule-based fallback
+|-- llm_client.py                  # Ollama / Groq / Gemini / OpenRouter client
+|-- avatar_renderer.py             # Layered male and female avatars
+|-- avatar_materials.py            # Fabric, denim and shoe shading for recoloured PNGs
+|-- database.py                    # Saved looks and Like / Not for me, Supabase or SQLite
+|-- supabase_*.py                  # Supabase client, auth and profile storage
+|-- supabase_schema.sql            # Tables to create in Supabase
+|-- session_manager.py             # Guest and signed-in session state
+|-- knowledge_base.py, catalog.py  # Rule loading and shared option lists
+|-- style_knowledge/               # JSON rules: palettes, seasons, styles, occasions
+|-- avatar_assets/                 # Base avatars and garment overlays
+|-- scripts/score_check.py         # Calibration report
+|-- promo/                         # Promo video, its renderer and soundtrack
+|-- tests/                         # pytest suite (117 tests)
 ```
 
-## Authentication and user data
+## Running it locally
 
-The active project uses Supabase Auth for registered-user accounts.
-
-- passwords are handled by Supabase Auth and are not stored in this repository
-- the app stores user nicknames separately in `public.user_profiles`
-- nickname uniqueness is enforced at the database level
-- saved looks are written to `public.saved_outfits` and linked to the authenticated user
-
-Guest mode is still available:
-
-- no sign-up is required
-- guest users can analyze images, build outfits, and generate looks
-- guest saved looks are isolated by browser session and stored locally; a new session does not load earlier guest looks
-
-## Local storage
-
-If Supabase is not configured, the app continues to work in local mode.
-
-- local saved looks are stored in `data/saved_outfits.db`
-- this file is ignored in Git and should not be pushed
-
-## Supabase setup
-
-To enable cloud-backed accounts and saved looks, configure these secrets:
-
-- `SUPABASE_URL`
-- `SUPABASE_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-
-`SUPABASE_KEY` should be the publishable or anon key used by the auth flow.  
-`SUPABASE_SERVICE_ROLE_KEY` should be the server-side service-role or secret key used for syncing saved looks and profile rows.
-
-### Required tables
-
-Create `saved_outfits`:
-
-```sql
-create table public.saved_outfits (
-  id bigint generated by default as identity primary key,
-  user_id text,
-  username text,
-  skin_tone text not null,
-  undertone text not null,
-  style text not null,
-  occasion text not null,
-  shirt_color text not null,
-  pants_color text not null,
-  shoes_color text not null,
-  score integer not null,
-  explanation text,
-  source text not null default 'streamlit_local',
-  created_at timestamptz not null default now()
-);
-```
-
-Create `user_profiles`:
-
-```sql
-create table public.user_profiles (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  email text not null,
-  email_lower text not null unique,
-  username text not null,
-  username_lower text not null unique,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-```
-
-### Local secrets file
-
-Copy `streamlit_secrets.example.toml` to `.streamlit/secrets.toml` and fill in the real values.
-
-Do not commit the real `.streamlit/secrets.toml` file to GitHub.
-
-## How saved data works
-
-### In Supabase
-
-- `Authentication -> Users` shows registered accounts
-- `Table Editor -> user_profiles` shows stored nicknames and deduplicated profile rows
-- `Table Editor -> saved_outfits` shows saved cloud looks
-
-### Locally
-
-- saved looks appear in the app even without Supabase
-- local rows are stored in the SQLite file under `data/`
-- reads are restricted to the current user or guest session
-- local fallback saves remain visible alongside cloud looks after connectivity recovers; they are not automatically uploaded
-
-## Running the app
-
-### Windows PowerShell
+Python 3.13 is the tested version.
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-### Linux / macOS / WSL
+On Linux or macOS:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 python3 -m streamlit run app.py
 ```
 
-## Running tests
+The app runs without any cloud setup. Saved looks and reactions then go to `data/saved_outfits.db`, which Git ignores.
+
+## Supabase (optional)
+
+With Supabase configured, people can sign up, log in, and keep their looks and reactions across devices. Add these secrets to `.streamlit/secrets.toml` locally or to the Render environment:
+
+```text
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your-anon-or-publishable-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Use the base project URL, without `/auth/v1` or `/rest/v1`. The anon key handles sign-in; the service-role key reads and writes the tables on the server, so keep it out of Git.
+
+Run `supabase_schema.sql` in the Supabase SQL editor. It creates `user_profiles` (unique email and nickname), `saved_outfits` and `outfit_feedback`, and adds the `metadata` column that stores the avatar and garment choices of a saved look. If the cloud is unreachable, saves and reactions go to the local SQLite file instead. Guests always stay local, and each guest session only sees its own looks.
+
+If Supabase Auth requires email confirmation, new users have to confirm before they can log in.
+
+## Tests
 
 ```bash
 python -m pytest -q
 ```
 
-## Current strengths
+On Windows, if pytest cannot write to its default temp folder, pass one it can use:
 
-- local-first startup with no mandatory cloud dependency
-- optional Supabase-based auth and saved-look sync
-- database-backed duplicate nickname prevention through `user_profiles`
-- explicit image-analysis confidence and warning messages
-- structured recommendation logic backed by local JSON rules
-- layered avatar previews for both manual and generated looks
-
-## Current limitations
-
-- skin-tone and undertone estimation is still heuristic and lighting-sensitive
-- avatar quality depends on the garment overlay assets
-- personalization is still lightweight and not yet a full long-term preference engine
-- password reset and broader account recovery flows are not implemented
-
-
-## Avatar models
-
-The sidebar **Avatar model** selector defaults to **Man**. Choose **Woman** to use
-`avatar_assets/girl cloths/girl_avatar.png` with its own fitted shirt, skirt or pants, and
-sneakers or heels. Color selections carry across models. The lower-body color
-controls pants for the male model and the skirt for the female model.
-Select **Woman → Top / outfit → Dress** to use the fitted one-piece dress. Its color and shoe selection apply to builder, generated recommendations, and saved looks. Dress mode has no separate bottom color; its score assesses the dress and shoes.
-
-Saved looks retain their model and footwear in `metadata`; older looks default to
-the male model. SQLite adds this column automatically. For cloud storage, run this
-migration in the Supabase SQL editor before saving new looks:
-
-```sql
-alter table public.saved_outfits
-add column if not exists metadata jsonb not null default '{}'::jsonb;
+```powershell
+python -m pytest -q --basetemp .pytest-tmp
 ```
 
-Without this cloud column, new saves with avatar metadata fall back to local storage.
-The renderer keeps the original PNGs unchanged and uses separate female fitting
-coordinates in `FEMALE_FIT` in `avatar_renderer.py`. Previews preserve body proportions.
+## Promo video
 
+`promo/render_promo.py` draws every frame with Pillow from the real engine and avatar renderer, and `promo/compose_music.py` synthesises the soundtrack with NumPy, so neither depends on licensed media. Rebuild the video after a change:
 
-### Expanded wardrobe controls
+```bash
+python promo/compose_music.py
+python promo/render_promo.py
+```
 
-- **Top**: shirt, hoodie, or jacket for either avatar. Jackets have a separate color control.
-- **Bottom** (Woman): skirt or pants. The color picker label follows the selected item.
-- Builder, generated previews, and saved looks use the selected garments.
-- Saved metadata includes `top_style`, `bottom_style`, and `outerwear_color`.
-  Existing saved looks continue to use shirts and their original model's default bottom.
-- The outfit score continues to assess the shirt/hoodie, bottom and shoe color palette;
-  the separate jacket color is a preview customization and is not included in the score.
+With `imageio-ffmpeg` installed the output is H.264 with AAC audio. Without it, the script writes a silent MPEG-4 file through OpenCV.
 
+## Limitations
 
-### PNG material rendering
+Skin tone and undertone come from a heuristic that is sensitive to lighting, and face detection uses OpenCV's lightweight detector rather than a face-parsing model. The avatars are 2D PNG overlays, so realism depends on those assets. The rules are explainable and fixed: reactions personalise the ranking, but the app does not follow trends. Password reset is not implemented.
 
-`avatar_materials.py` adapts the material ideas in the supplied Blender scene
-script to the project's existing 2D PNG renderer. Recoloring works in linear
-color space, preserves the source's baked folds and shadows, and applies subtle
-material-specific highlights for fabric, denim, jackets, and shoes. Exposure is
-computed from opaque garment pixels so transparent padding does not affect it.
-Skin-tone mapping remains unchanged. This is image-based shading, not 3D PBR or
-three-point relighting. No Blender or `bpy` dependency is required. A full Blender
-pipeline would require fitted 3D body and garment meshes that are not present here.
+## Credits
+
+Built by Masanbat Mulu.
