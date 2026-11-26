@@ -7,7 +7,15 @@ import streamlit as st
 
 from avatar_renderer import render_avatar
 from catalog import ALL_COLORS, COLOR_MAP, OCCASION_OPTIONS, STYLE_OPTIONS, UNDERTONE_OPTIONS
-from database import active_storage_backend, get_saved_outfits, init_db, save_outfit
+from database import (
+    active_storage_backend,
+    feedback_user_context,
+    get_saved_outfits,
+    get_style_feedback,
+    init_db,
+    record_outfit_feedback,
+    save_outfit,
+)
 from image_analysis import ImageAnalysisError, analyze_skin_from_upload
 from knowledge_base import SOURCES
 from recommendation_engine import generate_dress_suggestions, score_dress, generate_outfit_suggestions, get_avoid_colors, get_recommended_colors, score_breakdown
@@ -118,6 +126,36 @@ def save_current_outfit(
                   "bottom_style": "dress" if st.session_state.top_style == "dress" else st.session_state.female_bottom_style if st.session_state.avatar_model == "female" else "pants",
                   "outerwear_color": st.session_state.outerwear_color},
     )
+
+
+def react_to_outfit(look: dict, feedback: str) -> None:
+    """on_click callback: store a like / not-for-me reaction and queue a confirmation."""
+    backend = record_outfit_feedback(
+        user_id=current_user_id(),
+        username=current_username() if is_authenticated() else None,
+        skin_tone=look["skin_tone"],
+        undertone=look["undertone"],
+        style=look["style"],
+        occasion=look["occasion"],
+        shirt_color=look["shirt_color"],
+        pants_color=look["pants_color"],
+        shoes_color=look["shoes_color"],
+        outfit_score=int(look["score"]),
+        feedback=feedback,
+    )
+    action = "Liked" if feedback == "like" else "Marked as not for you"
+    where = "your account" if backend == "supabase" else "this device"
+    st.session_state.feedback_flash = f"{action}. Suggestions will adapt (saved on {where})."
+
+
+def render_feedback_buttons(look: dict, key: str) -> None:
+    like_col, unlike_col = st.columns(2, gap="small")
+    with like_col:
+        st.button("Like", key=f"like_{key}", width="stretch",
+                  on_click=react_to_outfit, args=(look, "like"))
+    with unlike_col:
+        st.button("Not for me", key=f"unlike_{key}", width="stretch",
+                  on_click=react_to_outfit, args=(look, "unlike"))
 
 
 def load_outfit_into_builder(outfit: dict) -> None:
@@ -266,7 +304,10 @@ undertone = st.session_state.undertone
 style = st.session_state.style
 occasion = st.session_state.occasion
 
-recommended_colors = get_recommended_colors(undertone, style, occasion)
+style_feedback = get_style_feedback(current_user_id())
+user_context = feedback_user_context(style_feedback)
+profile_fields = {"skin_tone": skin_tone, "undertone": undertone, "style": style, "occasion": occasion}
+recommended_colors = get_recommended_colors(undertone, style, occasion, user_context=user_context)
 avoid_colors = get_avoid_colors(undertone)
 
 if storage_backend == "supabase":
@@ -291,6 +332,14 @@ render_palette_hero(
 )
 if auth_enabled and is_authenticated():
     render_welcome_card(current_username())
+if st.session_state.get("feedback_flash"):
+    st.toast(st.session_state.feedback_flash)
+    st.session_state.feedback_flash = None
+if style_feedback["feedback_count"]:
+    st.caption(
+        f"Learning from {style_feedback['feedback_count']} reaction{'s' if style_feedback['feedback_count'] != 1 else ''}: "
+        f"{style_feedback['like_count']} liked, {style_feedback['unlike_count']} not for you."
+    )
 
 tab_analyzer, tab_builder, tab_generator, tab_assistant, tab_saved, tab_sources = st.tabs(
     ["Image Analyzer", "Outfit Builder", "Generate 5 Looks", "AI Style Assistant", "Saved Looks", "Sources"]
@@ -424,6 +473,11 @@ with tab_builder:
                     st.success("Outfit saved to Supabase.")
                 else:
                     st.success("Outfit saved locally.")
+            render_feedback_buttons(
+                {**profile_fields, "shirt_color": shirt_color, "pants_color": pants_color,
+                 "shoes_color": shoes_color, "score": score},
+                "builder",
+            )
 
     with right_col:
         with card():
@@ -455,13 +509,17 @@ with tab_generator:
         "Five looks for your profile",
         "Ranked by the scoring engine. Open one in the Builder to adjust it, or save it as it is.",
     )
-    suggestions = (generate_dress_suggestions if top_style == "dress" else generate_outfit_suggestions)(
-        skin_tone=skin_tone,
-        undertone=undertone,
-        style=style,
-        occasion=occasion,
-        limit=5,
-    )
+    if top_style == "dress":
+        suggestions = generate_dress_suggestions(skin_tone, undertone, style, occasion, limit=5)
+    else:
+        suggestions = generate_outfit_suggestions(
+            skin_tone=skin_tone,
+            undertone=undertone,
+            style=style,
+            occasion=occasion,
+            limit=5,
+            user_context=user_context,
+        )
 
     if suggestions:
         featured = suggestions[0]
@@ -532,6 +590,10 @@ with tab_generator:
                                 st.success(f"Look {idx} saved to Supabase.")
                             else:
                                 st.success(f"Look {idx} saved locally.")
+                    render_feedback_buttons(
+                        {**profile_fields, **{k: outfit[k] for k in ("shirt_color", "pants_color", "shoes_color", "score")}},
+                        f"generated_{idx}",
+                    )
 
 with tab_assistant:
     render_section_intro(
@@ -625,7 +687,7 @@ with tab_saved:
     if not saved_outfits:
         st.info("No saved outfits yet.")
     else:
-        for outfit in saved_outfits:
+        for saved_index, outfit in enumerate(saved_outfits):
             with st.expander(f"Look #{outfit['id']} - {outfit['score']}/100"):
                 meta_col, preview_col = st.columns([1.1, 0.9], gap="large")
 
@@ -650,6 +712,11 @@ with tab_saved:
                         st.write(f"**{'Skirt' if outfit.get('metadata', {}).get('bottom_style', 'skirt' if outfit.get('metadata', {}).get('avatar_model') == 'female' else 'pants') == 'skirt' else 'Pants'}:** {humanize_value(outfit['pants_color'])}")
                     st.write(f"**Shoes:** {humanize_value(outfit['shoes_color'])}")
                     st.caption(f"Saved at: {outfit['created_at']}")
+                    render_feedback_buttons(
+                        {k: outfit[k] for k in ("skin_tone", "undertone", "style", "occasion",
+                                                "shirt_color", "pants_color", "shoes_color", "score")},
+                        f"saved_{saved_index}_{outfit['id']}",
+                    )
 
                 with preview_col:
                     saved_avatar = render_avatar(
